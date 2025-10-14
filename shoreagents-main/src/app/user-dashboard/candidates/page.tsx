@@ -24,34 +24,16 @@ import {
 import { useState, useEffect } from 'react'
 import { getEmployeeCardData } from '@/lib/api'
 import { EmployeeCardData } from '@/types/api'
+import { useEmployeeCardData } from '@/hooks/use-api'
 
 export default function CandidatesPage() {
   const { user } = useUserAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [favorites, setFavorites] = useState<string[]>([])
-  const [candidates, setCandidates] = useState<EmployeeCardData[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Fetch real candidates from BPOC API
-  useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        console.log('🔄 Fetching candidates from BPOC API...')
-        setLoading(true)
-        const data = await getEmployeeCardData()
-        console.log('✅ Fetched candidates:', data.length)
-        setCandidates(data)
-      } catch (error) {
-        console.error('❌ Error fetching candidates:', error)
-        setCandidates([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCandidates()
-  }, [])
+  
+  // Use TanStack Query for data fetching - preserves all custom logic
+  const { data: candidates = [], isLoading: loading, error } = useEmployeeCardData()
 
   const handleFavorite = (candidateId: string) => {
     setFavorites(prev => 
@@ -131,6 +113,16 @@ export default function CandidatesPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Error State */}
+            {error && (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">Failed to load candidates. Please try again.</p>
+                <Button onClick={() => window.location.reload()} variant="outline">
+                  Retry
+                </Button>
+              </div>
+            )}
 
             {/* Loading State */}
             {loading && (

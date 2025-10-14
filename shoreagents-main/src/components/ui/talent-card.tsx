@@ -9,7 +9,6 @@ import { Badge } from './badge';
 // import { ButtonLoader } from './loader'; // Removed - will be recreated later
 import { 
   User, 
-  Mail, 
   Eye,
   Trophy,
   Calendar,
@@ -186,12 +185,6 @@ export function TalentCard({ data, onAskForInterview }: TalentCardProps) {
           </div>
 
           {/* Email */}
-          {data.user.email && (
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Mail className="w-4 h-4" />
-              <span className="truncate max-w-48">{data.user.email}</span>
-            </div>
-          )}
         </div>
 
 

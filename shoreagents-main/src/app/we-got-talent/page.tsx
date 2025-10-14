@@ -75,7 +75,6 @@ export default function EmployeesPage() {
     if (searchTerm) {
       filtered = filtered.filter(employee =>
         employee.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.user?.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.user?.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (employee.workStatus?.currentEmployer?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -183,7 +182,7 @@ export default function EmployeesPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
               <Input
                 type="text"
-                placeholder="Search by name, email, position, or location..."
+                placeholder="Search by name, position, or location..."
                 value={searchTerm}
                 onChange={(e) => {
                   // recordInteraction('search-employees');

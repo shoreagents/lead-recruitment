@@ -139,11 +139,11 @@ const fetchAutocompleteSuggestions = async (data: AutocompleteData): Promise<AIS
   
   // For description type, return the string directly
   if (data.type === 'description') {
-    return result.suggestions;
+    return result;
   }
   
   // For other types, return the suggestions array
-  return result.suggestions;
+  return result;
 };
 
 const checkEmailExists = async (data: CheckEmailData): Promise<{ exists: boolean }> => {
@@ -350,19 +350,44 @@ interface BPOCUser {
 }
 
 const fetchBPOCEmployeeData = async (): Promise<BPOCUser[]> => {
-  const response = await fetch('https://www.bpoc.io/api/public/user-data');
+  // Fetch data from API route (server-side database access)
+  const response = await fetch('/api/bpoc-users');
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   
-  const data = await response.json();
+  const result = await response.json();
   
-  if (!data.success) {
-    throw new Error('API returned unsuccessful response');
+  if (!result.success) {
+    throw new Error(`API error: ${result.error || 'Unknown error'}`);
   }
   
-  return data.data;
+  const bpocUsers = result.data;
+  
+  // Convert to BPOCUser format
+  return bpocUsers.map((user: any) => ({
+    user_id: user.user_id,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    full_name: user.full_name,
+    location: user.location,
+    avatar_url: user.avatar_url,
+    bio: user.bio,
+    position: user.position,
+    current_position: user.current_position,
+    work_status: user.work_status,
+    expected_salary: user.expected_salary,
+    user_created_at: user.user_created_at,
+    overall_score: user.overall_score,
+    skills_snapshot: user.skills_snapshot || [],
+    experience_snapshot: user.experience_snapshot,
+    key_strengths: user.key_strengths || [],
+    improvements: user.improvements || [],
+    recommendations: user.recommendations || [],
+    improved_summary: user.improved_summary,
+    strengths_analysis: user.strengths_analysis
+  }));
 };
 
 export const useBPOCEmployeeData = () => {
@@ -371,6 +396,10 @@ export const useBPOCEmployeeData = () => {
     queryFn: fetchBPOCEmployeeData,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, // Refetch on component mount
   });
 };
 
@@ -388,25 +417,31 @@ export const useBPOCEmployeeById = (employeeId: string) => {
     enabled: !!employeeId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
 
-// Employee Card Data Hook for Talent Pool
+// Employee Card Data Hook for Talent Pool - Now using BPOC database via API
 const fetchEmployeeCardData = async (): Promise<EmployeeCardData[]> => {
-  const response = await fetch('https://www.bpoc.io/api/public/user-data');
+  // Fetch data from API route (server-side database access)
+  const response = await fetch('/api/bpoc-users');
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   
-  const data = await response.json();
+  const result = await response.json();
   
-  if (!data.success) {
-    throw new Error('API returned unsuccessful response');
+  if (!result.success) {
+    throw new Error(`API error: ${result.error || 'Unknown error'}`);
   }
   
-  // Convert BPOC data to EmployeeCardData format
-  return data.data.map((bpocUser: any) => {
+  const bpocUsers = result.data;
+  
+  // Convert BPOC database data to EmployeeCardData format
+  return bpocUsers.map((bpocUser: any) => {
     const candidateProfile = bpocUser.candidate_profile as Record<string, unknown>;
     const email = candidateProfile?.email as string || '';
 
@@ -419,6 +454,9 @@ const fetchEmployeeCardData = async (): Promise<EmployeeCardData[]> => {
         location: bpocUser.location,
         avatar: bpocUser.avatar_url,
         bio: bpocUser.bio,
+        work_status: bpocUser.work_status,
+        created_at: bpocUser.user_created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         score: bpocUser.overall_score || 0,
         skills: bpocUser.skills_snapshot || [],
         experience: bpocUser.experience_snapshot ? 
@@ -436,19 +474,22 @@ const fetchEmployeeCardData = async (): Promise<EmployeeCardData[]> => {
       applications: [], // Empty array for now
       appliedJobs: [], // Empty array for now
       workStatus: {
-        id: bpocUser.id || '',
-        userId: bpocUser.id || '',
-        currentEmployer: bpocUser.current_employer || 'Not specified',
+        id: bpocUser.user_id || '',
+        userId: bpocUser.user_id || '',
+        currentEmployer: 'Not specified', // This field might not be in the database
         currentPosition: bpocUser.current_position || bpocUser.position || 'Not specified',
         workStatus: bpocUser.work_status || 'Not specified',
         preferredShift: 'Not specified',
         workSetup: 'Not specified',
         currentMood: 'Not specified',
         noticePeriodDays: 0,
-        expectedSalary: bpocUser.expected_salary || '0'
+        expectedSalary: bpocUser.expected_salary || '0',
+        completed: bpocUser.work_status_completed || false,
+        createdAt: bpocUser.user_created_at || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       },
-      resume: null, // Will be fetched separately if needed
-      aiAnalysis: null // Will be fetched separately if needed
+      resume: undefined, // Will be fetched separately if needed
+      aiAnalysis: undefined // Will be fetched separately if needed
     };
   });
 };
@@ -459,6 +500,29 @@ export const useEmployeeCardData = () => {
     queryFn: fetchEmployeeCardData,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+  });
+};
+
+// BPOC Database Connection Test Hook
+export const useBPOCDatabaseTest = () => {
+  return useQuery({
+    queryKey: ['bpoc-database-test'],
+    queryFn: async () => {
+      const response = await fetch('/api/test-bpoc-db');
+      if (!response.ok) {
+        throw new Error('Failed to test BPOC database connection');
+      }
+      const data = await response.json();
+      return data;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 60 * 1000, // 1 minute
+    retry: 2,
+    retryDelay: 1000,
+    refetchOnWindowFocus: false,
   });
 };
 

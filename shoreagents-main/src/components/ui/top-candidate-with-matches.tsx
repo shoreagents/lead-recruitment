@@ -12,6 +12,7 @@ import {
 import { useFavorites } from '@/lib/favorites-context'
 import { getEmployeeCardData } from '@/lib/api'
 import { EmployeeCardData } from '@/types/api'
+import { useEmployeeCardData } from '@/hooks/use-api'
 
 // Top Candidate Section Component
 interface TopCandidateSectionProps {
@@ -27,34 +28,20 @@ const TopCandidateSection = ({
   onViewProfile,
   onAskForInterview
 }: TopCandidateSectionProps) => {
-  const [employeeProfile, setEmployeeProfile] = useState<EmployeeCardData | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-
-  // Fetch employee profile from BPOC API
-  useEffect(() => {
-    const fetchEmployeeProfile = async () => {
-      if (!topCandidate) return;
-      
-      setIsLoadingProfile(true);
-      try {
-        const userId = String(((topCandidate as Record<string, unknown>).user as Record<string, unknown>)?.id || '');
-        if (userId) {
-          const profiles = await getEmployeeCardData();
-          // Find the profile that matches the current candidate
-          const profile = profiles.find(p => p.user.id === userId);
-          if (profile) {
-            setEmployeeProfile(profile);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching employee profile:', error);
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    };
-
-    fetchEmployeeProfile();
-  }, [topCandidate]);
+  // Use TanStack Query for data fetching - preserves all custom logic
+  const { data: allProfiles = [], isLoading: isLoadingProfiles } = useEmployeeCardData();
+  
+  // Find the profile that matches the current candidate - preserves custom logic
+  const employeeProfile = React.useMemo(() => {
+    if (!topCandidate || !allProfiles.length) return null;
+    
+    const userId = String(((topCandidate as Record<string, unknown>).user as Record<string, unknown>)?.id || '');
+    if (!userId) return null;
+    
+    return allProfiles.find(p => p.user.id === userId) || null;
+  }, [topCandidate, allProfiles]);
+  
+  const isLoadingProfile = isLoadingProfiles;
 
   return (
     <div className="space-y-3 h-full flex flex-col">

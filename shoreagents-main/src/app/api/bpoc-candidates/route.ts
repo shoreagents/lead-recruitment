@@ -166,28 +166,37 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 BPOC Candidates API: Searching for ${role} (${level} level) in ${industry || 'any'} industry`);
 
-    // Fetch BPOC data
+    // Fetch BPOC data from database via API
     let bpocEmployees: BPOCUser[] = []
     try {
-      const response = await fetch('https://www.bpoc.io/api/public/user-data')
+      const { fetchBPOCUsersFromDatabase } = await import('@/lib/bpoc-database')
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      const bpocUsers = await fetchBPOCUsersFromDatabase()
       
-      const data = await response.json()
+      // Convert to BPOCUser format
+      bpocEmployees = bpocUsers.map(user => ({
+        user_id: user.user_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: user.full_name,
+        location: user.location,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        position: user.position,
+        current_position: user.current_position,
+        expected_salary: user.expected_salary,
+        work_status_completed: user.work_status_completed,
+        overall_score: user.overall_score,
+        skills_snapshot: user.skills_snapshot,
+        experience_snapshot: user.experience_snapshot
+      }))
       
-      if (!data.success) {
-        throw new Error('API returned unsuccessful response')
-      }
-      
-      bpocEmployees = data.data
-      console.log(`📋 BPOC Candidates API: Fetched ${bpocEmployees.length} total employees from BPOC`);
+      console.log(`📋 BPOC Candidates API: Fetched ${bpocEmployees.length} total employees from BPOC database`);
       
     } catch (error) {
-      console.error('❌ Error fetching BPOC data:', error);
+      console.error('❌ Error fetching BPOC data from database:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch BPOC candidate data' },
+        { error: 'Failed to fetch BPOC candidate data from database' },
         { status: 500 }
       );
     }
