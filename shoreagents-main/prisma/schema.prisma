@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+model User {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String             @unique @map("user_id") @db.VarChar(255)
+  first_name          String?            @map("first_name") @db.VarChar(100)
+  last_name           String?            @map("last_name") @db.VarChar(100)
+  company             String?            @db.VarChar(200)
+  email               String?            @db.VarChar(255)
+  phone_number        String?            @map("phone_number") @db.VarChar(20)
+  country             String?            @db.VarChar(100)
+  created_at          DateTime?          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at          DateTime?          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  auth_user_id        String?            @map("auth_user_id") @db.Uuid
+  user_type           UserType           @default(Anonymous) @map("user_type")
+  industry_name       String?            @map("industry_name") @db.VarChar(200)
+  first_lead_capture  Boolean?           @default(false) @map("first_lead_capture")
+  second_lead_capture Boolean?           @default(false) @map("second_lead_capture")
+  third_lead_capture  Boolean?           @default(false) @map("third_lead_capture")
+  candidateViews      CandidateView[]    @relation("UserCandidateViews")
+  interviewRequests   InterviewRequest[] @relation("UserInterviewRequests")
+  pricingQuotes       PricingQuote[]     @relation("UserPricingQuotes")
+
+  @@index([company], map: "idx_users_company")
+  @@index([country], map: "idx_users_country")
+  @@index([email], map: "idx_users_email")
+  @@index([first_lead_capture], map: "idx_users_first_lead_capture")
+  @@index([industry_name], map: "idx_users_industry_name")
+  @@index([second_lead_capture], map: "idx_users_second_lead_capture")
+  @@index([third_lead_capture], map: "idx_users_third_lead_capture")
+  @@index([user_id], map: "idx_users_user_id")
+  @@map("users")
+  @@schema("public")
+}
+
+model PricingQuote {
+  id                        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                   String             @map("user_id")
+  session_id                String?            @map("session_id")
+  quote_timestamp           DateTime           @default(now()) @map("quote_timestamp") @db.Timestamptz(6)
+  member_count              Int                @map("member_count")
+  industry                  String
+  total_monthly_cost        Decimal            @map("total_monthly_cost") @db.Decimal(10, 2)
+  currency_code             String             @default("PHP") @map("currency_code") @db.VarChar(3)
+  created_at                DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at                DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
+  quote_number              Int                @default(1) @map("quote_number")
+  candidate_recommendations Json?              @default("[]") @map("candidate_recommendations")
+  pricingQuoteRoles         PricingQuoteRole[]
+  user                      User               @relation("UserPricingQuotes", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pricing_quotes_user_id")
+
+  @@index([candidate_recommendations], map: "idx_pricing_quotes_candidate_recommendations", type: Gin)
+  @@index([industry], map: "idx_pricing_quotes_industry")
+  @@index([user_id, quote_number], map: "idx_pricing_quotes_quote_number")
+  @@index([user_id], map: "idx_pricing_quotes_user_id")
+  @@map("pricing_quotes")
+  @@schema("public")
+}
+
+model CandidateView {
+  id                Int       @id @default(autoincrement())
+  user_id           String    @map("user_id") @db.VarChar(255)
+  candidate_id      String    @map("candidate_id") @db.VarChar(255)
+  candidate_name    String?   @map("candidate_name") @db.VarChar(255)
+  view_duration     Int?      @map("view_duration")
+  page_views        Int?      @default(1) @map("page_views")
+  created_at        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  scroll_percentage Int?      @default(0) @map("scroll_percentage")
+  user              User      @relation("UserCandidateViews", fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([user_id, candidate_id], map: "unique_user_candidate")
+  @@index([candidate_id, created_at], map: "idx_candidate_views_candidate_created")
+  @@index([candidate_id], map: "idx_candidate_views_candidate_id")
+  @@index([candidate_name], map: "idx_candidate_views_candidate_name")
+  @@index([created_at], map: "idx_candidate_views_created_at")
+  @@index([scroll_percentage], map: "idx_candidate_views_scroll_percentage")
+  @@index([user_id, created_at], map: "idx_candidate_views_user_created")
+  @@index([user_id], map: "idx_candidate_views_user_id")
+  @@map("candidate_views")
+  @@schema("public")
+}
+
+model AiAnalysis {
+  id                              Int          @id @default(autoincrement())
+  user_id                         String       @map("user_id") @db.VarChar(255)
+  analysis_id                     String?      @unique @map("analysis_id") @db.VarChar(255)
+  session_id                      String?      @map("session_id") @db.VarChar(255)
+  overall_score                   Int?         @map("overall_score")
+  ats_compatibility_score         Int?         @map("ats_compatibility_score")
+  content_quality_score           Int?         @map("content_quality_score")
+  professional_presentation_score Int?         @map("professional_presentation_score")
+  skills_alignment_score          Int?         @map("skills_alignment_score")
+  key_strengths                   Json?        @default("[]") @map("key_strengths")
+  improvements                    Json?        @default("[]")
+  recommendations                 Json?        @default("[]")
+  improved_summary                String?      @map("improved_summary")
+  strengths_analysis              Json?        @map("strengths_analysis")
+  salary_analysis                 Json?        @map("salary_analysis")
+  career_path                     Json?        @map("career_path")
+  section_analysis                Json?        @map("section_analysis")
+  candidate_profile               Json?        @map("candidate_profile")
+  skills_snapshot                 Json?        @default("[]") @map("skills_snapshot")
+  experience_snapshot             Json?        @map("experience_snapshot")
+  education_snapshot              Json?        @map("education_snapshot")
+  portfolio_links                 Json?        @default("[]") @map("portfolio_links")
+  analysis_created_at             DateTime?    @map("analysis_created_at") @db.Timestamptz(6)
+  analysis_updated_at             DateTime?    @map("analysis_updated_at") @db.Timestamptz(6)
+  created_at                      DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at                      DateTime?    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user                            BpocEmployee @relation("UserAiAnalysis", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([analysis_id], map: "idx_ai_analysis_analysis_id")
+  @@index([created_at], map: "idx_ai_analysis_created_at")
+  @@index([overall_score], map: "idx_ai_analysis_overall_score")
+  @@index([updated_at], map: "idx_ai_analysis_updated_at")
+  @@index([user_id], map: "idx_ai_analysis_user_id")
+  @@map("ai_analysis")
+  @@schema("public")
+}
+
+model BpocEmployee {
+  id                    Int          @id @default(autoincrement())
+  user_id               String       @unique @map("user_id") @db.VarChar(255)
+  full_name             String       @map("full_name") @db.VarChar(255)
+  first_name            String       @map("first_name") @db.VarChar(100)
+  last_name             String       @map("last_name") @db.VarChar(100)
+  current_position      String?      @map("current_position") @db.VarChar(255)
+  position              String?      @db.VarChar(255)
+  location              String?      @db.VarChar(255)
+  avatar_url            String?      @map("avatar_url")
+  bio                   String?
+  overall_score         Int?         @default(0) @map("overall_score")
+  skills_snapshot       Json?        @default("[]") @map("skills_snapshot")
+  experience_snapshot   Json?        @map("experience_snapshot")
+  expected_salary       Decimal?     @map("expected_salary") @db.Decimal(10, 2)
+  work_status           String?      @map("work_status") @db.VarChar(100)
+  user_created_at       DateTime?    @default(now()) @map("user_created_at") @db.Timestamptz(6)
+  created_at            DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at            DateTime?    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  key_strengths         Json?        @default("[]") @map("key_strengths")
+  improvements          Json?        @default("[]")
+  recommendations       Json?        @default("[]")
+  improved_summary      String?      @map("improved_summary")
+  strengths_analysis    Json?        @map("strengths_analysis")
+  work_status_completed Boolean?     @default(false) @map("work_status_completed")
+  aiAnalysis            AiAnalysis[] @relation("UserAiAnalysis")
+
+  @@index([created_at], map: "idx_bpoc_employees_created_at")
+  @@index([full_name], map: "idx_bpoc_employees_full_name")
+  @@index([location], map: "idx_bpoc_employees_location")
+  @@index([overall_score], map: "idx_bpoc_employees_overall_score")
+  @@index([position], map: "idx_bpoc_employees_position")
+  @@index([user_id], map: "idx_bpoc_employees_user_id")
+  @@index([work_status], map: "idx_bpoc_employees_work_status")
+  @@index([work_status_completed], map: "idx_bpoc_employees_work_status_completed")
+  @@map("bpoc_employees")
+  @@schema("public")
+}
+
+model InterviewRequest {
+  id                   Int      @id @default(autoincrement())
+  user_id              String   @map("user_id") @db.VarChar(255)
+  candidate_id         String   @map("candidate_id") @db.VarChar(255)
+  candidate_name       String   @map("candidate_name") @db.VarChar(255)
+  candidate_position   String?  @map("candidate_position") @db.VarChar(255)
+  requester_first_name String   @map("requester_first_name") @db.VarChar(100)
+  requester_last_name  String   @map("requester_last_name") @db.VarChar(100)
+  requester_email      String   @map("requester_email") @db.VarChar(255)
+  created_at           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user                 User     @relation("UserInterviewRequests", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([candidate_id], map: "idx_interview_request_candidate_id")
+  @@index([created_at], map: "idx_interview_request_created_at")
+  @@index([user_id], map: "idx_interview_request_user_id")
+  @@map("interview_request")
+  @@schema("public")
+}
+
+model PricingQuoteRole {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quote_id         String       @map("quote_id") @db.Uuid
+  role_title       String       @map("role_title")
+  role_description String?      @map("role_description")
+  experience_level String       @map("experience_level")
+  workspace_type   String       @map("workspace_type")
+  base_salary_php  Decimal      @map("base_salary_php") @db.Decimal(10, 2)
+  multiplier       Decimal      @db.Decimal(3, 2)
+  monthly_cost     Decimal      @map("monthly_cost") @db.Decimal(10, 2)
+  workspace_cost   Decimal      @map("workspace_cost") @db.Decimal(10, 2)
+  total_cost       Decimal      @map("total_cost") @db.Decimal(10, 2)
+  created_at       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at       DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  pricingQuote     PricingQuote @relation(fields: [quote_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pricing_quote_roles_quote_id")
+
+  @@index([quote_id], map: "idx_pricing_quote_roles_quote_id")
+  @@map("pricing_quote_roles")
+  @@schema("public")
+}
+
+model UserPageVisit {
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id              String    @map("user_id")
+  page_path            String    @map("page_path")
+  ip_address           String?   @map("ip_address")
+  visit_timestamp      DateTime  @default(now()) @map("visit_timestamp") @db.Timestamptz(6)
+  created_at           DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  visit_count          Int?      @default(1) @map("visit_count")
+  time_spent_seconds   Int?      @default(0) @map("time_spent_seconds")
+  last_visit_timestamp DateTime? @default(now()) @map("last_visit_timestamp") @db.Timestamptz(6)
+
+  @@map("user_page_visits")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model content_views {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String?   @db.VarChar(255)
+  content_type     String    @db.VarChar(50)
+  content_id       String    @db.VarChar(255)
+  content_title    String?   @db.VarChar(500)
+  content_url      String?
+  page_section     String?   @db.VarChar(100)
+  referrer_url     String?
+  referrer_type    String?   @db.VarChar(50)
+  view_duration    Int?
+  scroll_depth     Int?
+  viewed_at        DateTime? @default(now()) @db.Timestamptz(6)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  interaction_type String?   @default("view") @db.VarChar(50)
+  activity_count   Int?      @default(1)
+
+  @@index([activity_count], map: "idx_content_views_activity_count")
+  @@index([content_type, content_id, viewed_at], map: "idx_content_views_content_analytics")
+  @@index([content_id], map: "idx_content_views_content_id")
+  @@index([content_type], map: "idx_content_views_content_type")
+  @@index([content_type, content_id, interaction_type], map: "idx_content_views_interaction_analytics")
+  @@index([interaction_type], map: "idx_content_views_interaction_type")
+  @@index([referrer_type], map: "idx_content_views_referrer_type")
+  @@index([user_id, viewed_at], map: "idx_content_views_user_analytics")
+  @@index([user_id], map: "idx_content_views_user_id")
+  @@index([viewed_at], map: "idx_content_views_viewed_at")
+  @@schema("public")
+}
+
+enum UserType {
+  Anonymous
+  Regular
+  Admin
+
+  @@map("user_type_enum")
+  @@schema("public")
+}
