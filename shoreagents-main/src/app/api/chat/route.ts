@@ -9,12 +9,18 @@ function analyzeConversation(message: string, conversationHistory: Array<{ role:
   const messageLower = message.toLowerCase();
   const fullConversation = [...conversationHistory.map(msg => msg.content), message].join(' ').toLowerCase();
   
-  // Analyze user intent
+  // Analyze user intent - be more specific to avoid false positives
   let intent = 'general_inquiry';
+  
+  // Only detect specific business intents for clear requests
   if (messageLower.includes('pricing') || messageLower.includes('cost') || messageLower.includes('price') || messageLower.includes('quote')) {
     intent = 'pricing_inquiry';
   } else if (messageLower.includes('talent') || messageLower.includes('hire') || messageLower.includes('team') || messageLower.includes('staff')) {
-    intent = 'talent_inquiry';
+    // Only if it's a clear business request, not just casual mention
+    if (messageLower.includes('need') || messageLower.includes('want') || messageLower.includes('looking for') || 
+        messageLower.includes('build') || messageLower.includes('find') || messageLower.includes('get')) {
+      intent = 'talent_inquiry';
+    }
   } else if (messageLower.includes('service') || messageLower.includes('help') || messageLower.includes('support')) {
     intent = 'service_inquiry';
   } else if (messageLower.includes('contact') || messageLower.includes('reach') || messageLower.includes('call')) {
@@ -86,8 +92,11 @@ function analyzeConversation(message: string, conversationHistory: Array<{ role:
   const simpleGreetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy', 'greetings'];
   const isSimpleGreeting = simpleGreetings.some(greeting => fullConversation.toLowerCase().trim() === greeting);
   
-  if (!isSimpleGreeting && (fullConversation.includes('talent') || fullConversation.includes('hire') || fullConversation.includes('find') || fullConversation.includes('recruit')) && 
-      (fullConversation.includes('candidate') || fullConversation.includes('employee') || fullConversation.includes('staff') || fullConversation.includes('team'))) {
+  // Check for team/talent/hiring requests
+  const hasTeamKeywords = fullConversation.includes('team') || fullConversation.includes('staff') || fullConversation.includes('employee') || fullConversation.includes('candidate');
+  const hasActionKeywords = fullConversation.includes('create') || fullConversation.includes('build') || fullConversation.includes('hire') || fullConversation.includes('find') || fullConversation.includes('recruit') || fullConversation.includes('talent');
+  
+  if (!isSimpleGreeting && hasTeamKeywords && hasActionKeywords) {
     suggestedActions.push('pricing_calculator_modal');
   }
   
@@ -377,6 +386,12 @@ export async function POST(request: NextRequest) {
     
   // Analyze conversation context and user intent
   const conversationAnalysis = analyzeConversation(message, conversationHistory, userData);
+  console.log('🔍 Conversation Analysis:', {
+    message: message,
+    intent: conversationAnalysis.intent,
+    stage: conversationAnalysis.stage,
+    topics: conversationAnalysis.topics
+  });
   
   // Create personalized context based on user data and conversation analysis
   let personalizedContext = '';
@@ -407,11 +422,17 @@ export async function POST(request: NextRequest) {
   if (userData && !userData.isNewUser) {
     const { user, quotes, leadCaptureStatus, userProfile } = userData;
     
-    // Check if user is anonymous and missing contact information
-    if (user.user_type === 'Anonymous' && !userProfile.hasContactInfo) {
-      shouldRequestContactInfo = true;
-      contactRequestReason = 'anonymous_user_missing_contact';
-    }
+    console.log('🔍 User Data Debug:', {
+      userType: user.user_type,
+      hasContactInfo: userProfile.hasContactInfo,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      shouldRequestContactInfo: shouldRequestContactInfo
+    });
+    
+    // Don't ask for contact info immediately - only when user shows interest
+    // This will be handled by the specific interest-based triggers below
     
     // Don't ask for contact info from authenticated users (Regular/Admin)
     if (user.user_type === 'Regular' || user.user_type === 'Admin') {
@@ -429,10 +450,25 @@ export async function POST(request: NextRequest) {
       )
     );
     
-    // Check if user has been engaging but hasn't provided contact info
-    if (conversationHistory.length >= 3 && !userProfile.hasContactInfo && !hasProvidedContactInConversation) {
+    // Check if user has been engaging with business-related topics (3+ messages)
+    const businessTopics = conversationHistory.some(msg => 
+      msg.role === 'user' && (
+        msg.content.toLowerCase().includes('hire') ||
+        msg.content.toLowerCase().includes('team') ||
+        msg.content.toLowerCase().includes('talent') ||
+        msg.content.toLowerCase().includes('quote') ||
+        msg.content.toLowerCase().includes('pricing') ||
+        msg.content.toLowerCase().includes('cost') ||
+        msg.content.toLowerCase().includes('service') ||
+        msg.content.toLowerCase().includes('business') ||
+        msg.content.toLowerCase().includes('company')
+      )
+    );
+    
+    if (conversationHistory.length >= 3 && businessTopics && !userProfile.hasContactInfo && !hasProvidedContactInConversation) {
       shouldRequestContactInfo = true;
       contactRequestReason = 'engaged_user_missing_contact';
+      console.log('🎯 Triggering contact request: engaged_user_missing_contact');
     }
     
     // Check if user is asking for quotes but hasn't provided contact info
@@ -441,6 +477,7 @@ export async function POST(request: NextRequest) {
         !userProfile.hasContactInfo && !hasProvidedContactInConversation) {
       shouldRequestContactInfo = true;
       contactRequestReason = 'quote_request_missing_contact';
+      console.log('🎯 Triggering contact request: quote_request_missing_contact');
     }
     
     // Determine status-based question
@@ -461,9 +498,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create personalized greeting context
+    const fullName = user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Not provided';
+    console.log('🔍 Personalized Context - User Name:', fullName);
+    console.log('🔍 First Name:', user.first_name, 'Last Name:', user.last_name);
+    
     personalizedContext = `\n\nPERSONALIZED USER CONTEXT:
 - User Type: ${user.user_type}
-- Name: ${user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Not provided'}
+- Name: ${fullName}
 - Company: ${user.company || 'Not provided'}
 - Industry: ${user.industry || 'Not specified'}
 - Total Quotes: ${quotes.length}

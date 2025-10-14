@@ -56,33 +56,53 @@ export interface BPOCAnalysis {
 
 export class BPOCIntegration {
   private supabase = createClient()
-  private apiUrl = 'https://www.bpoc.io/api/public/user-data'
 
   /**
-   * Fetch data from BPOC API
+   * Fetch data from BPOC database via API
    */
   async fetchBPOCData(): Promise<BPOCEmployee[]> {
     try {
-      const response = await fetch(this.apiUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      })
-
+      // Fetch data from API route (server-side database access)
+      const response = await fetch('/api/bpoc-users')
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-
-      const data = await response.json()
       
-      if (!data.success) {
-        throw new Error(`BPOC API error: ${data.message || 'Unknown error'}`)
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(`API error: ${result.error || 'Unknown error'}`)
       }
-
-      return data.data || []
+      
+      const bpocUsers = result.data
+      
+      // Convert to BPOCEmployee format
+      return bpocUsers.map((user: any) => ({
+        user_id: user.user_id,
+        full_name: user.full_name,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        current_position: user.current_position,
+        position: user.position,
+        location: user.location,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        overall_score: user.overall_score,
+        skills_snapshot: user.skills_snapshot,
+        experience_snapshot: user.experience_snapshot,
+        expected_salary: user.expected_salary,
+        work_status: user.work_status,
+        work_status_completed: user.work_status_completed,
+        user_created_at: user.user_created_at,
+        key_strengths: user.key_strengths,
+        improvements: user.improvements,
+        recommendations: user.recommendations,
+        improved_summary: user.improved_summary,
+        strengths_analysis: user.strengths_analysis
+      }))
     } catch (error) {
-      console.error('Error fetching BPOC data:', error)
+      console.error('Error fetching BPOC data from database:', error)
       throw error
     }
   }
@@ -170,19 +190,26 @@ export class BPOCIntegration {
   }
 
   /**
-   * Test BPOC API connection
+   * Test BPOC database connection
    */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const employees = await this.fetchBPOCData()
-      return {
-        success: true,
-        message: `Successfully connected to BPOC API. Found ${employees.length} employees.`
+      const { testBPOCDatabaseConnection } = await import('@/lib/bpoc-database')
+      const result = await testBPOCDatabaseConnection()
+      
+      if (result.success) {
+        const employees = await this.fetchBPOCData()
+        return {
+          success: true,
+          message: `Successfully connected to BPOC database. Found ${employees.length} employees.`
+        }
+      } else {
+        return result
       }
     } catch (error) {
       return {
         success: false,
-        message: `BPOC API connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `BPOC database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       }
     }
   }

@@ -61,32 +61,9 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
     generateAIResponse
   } = useChatContext();
   
-  // Get existing userId from database or generate new one
-  const [userId, setUserId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const getExistingUserId = async () => {
-      try {
-        const response = await fetch('/api/get-existing-user');
-        const data = await response.json();
-        
-        if (data.success && data.userId) {
-          console.log('Using existing userId:', data.userId);
-          setUserId(data.userId);
-        } else {
-          console.log('No existing user found, generating new userId');
-          const newUserId = generateUserId();
-          setUserId(newUserId);
-        }
-      } catch (error) {
-        console.error('Error getting existing userId:', error);
-        const newUserId = generateUserId();
-        setUserId(newUserId);
-      }
-    };
-    
-    getExistingUserId();
-  }, []);
+  // Use the same user ID generation logic as AnonymousUserButton
+  const userId = useMemo(() => generateUserId(), []);
+  console.log('🎯 Chat Console using userId:', userId);
   
   const [inputValue, setInputValue] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
@@ -96,12 +73,13 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
   const [isFullHeight, setIsFullHeight] = useState(false);
   const [isCollectingContact, setIsCollectingContact] = useState(false);
   const [contactStep, setContactStep] = useState<'name' | 'email' | 'company' | null>(null);
+  
   const [contactData, setContactData] = useState<{name?: string; email?: string; company?: string}>({});
   const [isTalentSearchOpen, setIsTalentSearchOpen] = useState(false);
   const [isPricingCalculatorOpen, setIsPricingCalculatorOpen] = useState(false);
   const [isCollectingPricing, setIsCollectingPricing] = useState(false);
-  const [pricingStep, setPricingStep] = useState<'teamSize' | 'roleType' | 'roles' | 'description' | null>(null);
-  const [pricingData, setPricingData] = useState<{teamSize?: string; roleType?: string; roles?: string; description?: string}>({});
+  const [pricingStep, setPricingStep] = useState<'teamSize' | 'roleType' | 'roles' | 'experience' | 'description' | 'workplace' | null>(null);
+  const [pricingData, setPricingData] = useState<{teamSize?: string; roleType?: string; roles?: string; experience?: string; description?: string}>({});
   const [conversationContext, setConversationContext] = useState<{isTalentInquiry?: boolean; conversationHistory?: Message[]}>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -269,11 +247,16 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
       
        // Check if Maya is asking for contact information
        const responseLower = response.toLowerCase();
+       
        const isAskingForContact = 
          // Exact phrase matches
          responseLower.includes('before we continue our conversation, it\'s okay to have your name?') ||
          responseLower.includes('before we continue our conversation, it\'s okay to have your name') ||
          responseLower.includes('before we continue, it\'s okay to have your name') ||
+         // Maya's actual phrases
+         (responseLower.includes('before we dive in') && responseLower.includes('name')) ||
+         (responseLower.includes('may i first get your name')) ||
+         (responseLower.includes('get your name')) ||
          // Pattern matches for contact collection
          (responseLower.includes('before we continue') && responseLower.includes('name')) ||
          (responseLower.includes('before we continue') && responseLower.includes('contact')) ||
@@ -284,15 +267,24 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
          (responseLower.includes('to better assist you') && responseLower.includes('name')) ||
          (responseLower.includes('to provide you with better service') && responseLower.includes('name'));
        
+       console.log('🔍 Contact trigger check:', {
+         response: response,
+         responseLower: responseLower,
+         isAskingForContact: isAskingForContact,
+         isCollectingContact: isCollectingContact
+       });
+       
        if (isAskingForContact && !isCollectingContact) {
-         console.log('Maya is asking for contact info, triggering form');
-         // Only trigger contact collection for anonymous users
-         // Authenticated users already have contact information
-         if (!userData || userData.isNewUser || userData.user?.user_type === 'Anonymous') {
+         console.log('🎯 Triggering contact collection form!');
+         console.log('🔍 User data check:', userData);
+         
+         // Only trigger contact collection if user doesn't have contact info
+         if (!userData?.userProfile?.hasContactInfo) {
+           console.log('✅ User has no contact info, showing form');
            setIsCollectingContact(true);
            setContactStep('name');
          } else {
-           console.log('User is authenticated, skipping contact collection');
+           console.log('❌ User already has contact info, skipping form');
          }
        }
 
@@ -545,6 +537,7 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
               )}
               
               
+
               {/* Contact Collection Form */}
               {isCollectingContact && contactStep && (
                 <div className="mt-4">
@@ -579,7 +572,7 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
                         setIsCollectingPricing(false);
                         setPricingStep(null);
                       } else {
-                        setPricingStep(step as 'teamSize' | 'roleType' | 'roles' | 'description');
+                        setPricingStep(step as 'teamSize' | 'roleType' | 'roles' | 'experience' | 'description' | 'workplace');
                       }
                     }}
                     onFormDataChange={(data: any) => {

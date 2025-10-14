@@ -89,8 +89,8 @@ export function AIDescriptionGenerator({
   // Handle the response from TanStack Query
   useEffect(() => {
     if (shouldGenerate && aiSuggestions) {
-      // For descriptions, aiSuggestions is a string, not an array
-      const description = typeof aiSuggestions === 'string' ? aiSuggestions : aiSuggestions[0]?.description;
+      // For descriptions, aiSuggestions is now a string directly
+      const description = typeof aiSuggestions === 'string' ? aiSuggestions : '';
       if (description) {
         onChange(description);
         setHasGenerated(true);
