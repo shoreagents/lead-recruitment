@@ -1,0 +1,137 @@
+{
+  "name": "Aaron Punzalan",
+  "email": "apunzalan500@gmail.com",
+  "phone": "+63 961 260 9123",
+  "location": "Angeles City, Pampanga",
+  "summary": "Motivated aspiring web developer eager to grow skills and contribute to innovative, user-focused web projects in a collaborative setting. Seeking hands-on experience with modern web technologies.",
+  "skills": [
+    "Critical Thinking",
+    "Adaptability",
+    "Always Eager to Learn and Improve",
+    "Attention to Detail",
+    "Teamwork",
+    "Hardworking",
+    "Problem Solving",
+    "HTML & CSS",
+    "JavaScript",
+    "Angular",
+    "React",
+    "MongoDB",
+    "Node & Express",
+    "Tailwind CSS",
+    "Bootstrap",
+    "Wordpress",
+    "MySQL",
+    "Git",
+    "Canva",
+    "Figma",
+    "Adobe Xd"
+  ],
+  "experience": [
+    {
+      "company": "IT Squarehub",
+      "position": "Full Stack Web Developer Intern",
+      "duration": "June 2024 - September 2024",
+      "description": "Developed and refined the front end of an Inventory System, and Performance Management System using Angular, improving user experience and interface usability."
+    }
+  ],
+  "education": [
+    {
+      "institution": "Holy Angel University",
+      "degree": "Bachelor of Science in Information Technology Major in Web Development",
+      "year": "July 2021 - April 2025"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "JavaScript Algorithms and Data Structures",
+      "issuer": "freeCodeCamp",
+      "year": "2025"
+    },
+    {
+      "name": "Introduction to Front End Development",
+      "issuer": "Simplilearn",
+      "year": "2025"
+    },
+    {
+      "name": "JavaScript Essentials 2",
+      "issuer": "Cisco Academy",
+      "year": "2025"
+    },
+    {
+      "name": "ReactJS for Beginners",
+      "issuer": "Simplilearn",
+      "year": "2025"
+    },
+    {
+      "name": "Angular Basics",
+      "issuer": "Simplilearn",
+      "year": "2025"
+    },
+    {
+      "name": "JavaScript Essentials 1",
+      "issuer": "Cisco Academy",
+      "year": "2024"
+    },
+    {
+      "name": "Front End Development Libraries",
+      "issuer": "freeCodeCamp",
+      "year": "2024"
+    },
+    {
+      "name": "Responsive Web Design",
+      "issuer": "freeCodeCamp",
+      "year": "2024"
+    }
+  ],
+  "references": [
+    {
+      "name": "Michael Quiros",
+      "position": "HR Associate",
+      "company": "IT Squarehub",
+      "phone": "+63 919 322 2585",
+      "email": "michaelquiros@itsquarehub.com"
+    },
+    {
+      "name": "Gian Tolibas",
+      "position": "Capstone Adviser",
+      "company": "Holy Angel University",
+      "phone": "+63 945 516 3247",
+      "email": "giantolibas@gmail.com"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Pinescape",
+      "year": "2025",
+      "description": "Developed a front-end travel website focused on Baguio City, allowing users to explore destinations and book their travel, built with React and Tailwind CSS."
+    },
+    {
+      "name": "Sole Vibe",
+      "year": "2025",
+      "description": "Developed a front end web application for sneaker enthusiasts to browse and order sneakers, built with React and Tailwind CSS."
+    },
+    {
+      "name": "HallyuVerse",
+      "year": "2025",
+      "description": "Developed a front end Angular and Tailwind CSS website for K-Drama fans to browse genres, view drama details, watch trailers, and add it to their favorites."
+    },
+    {
+      "name": "ScentHub",
+      "year": "2025",
+      "description": "Developed a full-stack website for perfume enthusiasts to write, view, and like reviews using React, Node.js, and Express.js."
+    },
+    {
+      "name": "Objectiva - Capstone Project",
+      "year": "2024 - 2025",
+      "description": "Developed the front end of an interactive website that teaches OOP principles in Java through lessons, exercises, and quizzes using Angular."
+    },
+    {
+      "name": "Inventory System & Performance Management System - OJT Project",
+      "year": "2024",
+      "description": "Built the front end of both an Inventory System and a Performance Management System using Angular, enabling efficient supply tracking, report generation, performance reviews, and employee tracking features."
+    }
+  ],
+  "portfolio": "https://punz01.github.io/aaronpunzalan-portfolio/",
+  "linkedin": "https://www.linkedin.com/in/aaron-punzalan-89b0a0303/"
+}

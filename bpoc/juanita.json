@@ -1,0 +1,119 @@
+[
+  {
+    "contact_information": {
+      "name": "Juanita G. Tabouris",
+      "phone": "0905-850-9568",
+      "email": "tabourisjuanita@gmail.com",
+      "address": "Model Community, Porac, Pampanga, 2008"
+    },
+    "professional_experience": {
+      "summary": "A detail-oriented professional with strong leadership, organizational, and communication skills developed through diverse experiences in academic and professional settings. My background in managing and coaching teams, facilitating meetings, and handling complex processes has equipped me with the ability to mentor, guide, and inspire learners. I honed my ability to manage group dynamics, delegate tasks, and foster collaboration. My professional experience includes coaching teammates as a Subject Matter Expert and providing client support, where I developed my ability to explain complex topics in clear, engaging ways. I am also fluent in Filipino and English, enabling me to connect effectively with diverse audiences.",
+      "positions": [
+        {
+          "title": "Subject Matter Expert | Clinical Review Team",
+          "company": "TaskUs",
+          "dates": "September 2024 - March 2025",
+          "responsibilities": [
+            "Assisting teammates with work process concerns",
+            "Handling supervisor calls",
+            "Coaching teammates and facilitating team meetings",
+            "In charge with suggesting process improvements to clients"
+          ]
+        },
+        {
+          "title": "Teammate | Clinical Review Team",
+          "company": "TaskUs",
+          "dates": "2023 - September 2024",
+          "responsibilities": [
+            "Creating Authorization for Member's Procedure",
+            "Scheduling their Providers and our Clinicians",
+            "Call Handling"
+          ]
+        },
+        {
+          "title": "Teammate | Provider Service Specialist",
+          "company": "TaskUs",
+          "dates": "2022 - 2023",
+          "responsibilities": [
+            "Verifying Providers Information",
+            "Email Management",
+            "Checking if Providers are In-Network with the Health Plan",
+            "Outbound calls"
+          ]
+        },
+        {
+          "title": "Customer Service Specialist",
+          "company": "Concentrix CVG",
+          "dates": "June 2022 - August 2022",
+          "responsibilities": [
+            "Call Handling"
+          ]
+        }
+      ]
+    },
+    "education": [
+      {
+        "degree": "Bachelor of Science in Management Accounting",
+        "institution": "Holy Angel University",
+        "dates": "2020 - 2024"
+      },
+      {
+        "program": "Accounting, Business and Management",
+        "institution": "Holy Angel University",
+        "dates": "2018 - 2020"
+      }
+    ],
+    "expertise": [
+      "Bookkeeping",
+      "Public Speaking"
+    ],
+    "skills_and_competencies": [
+      "Interpersonal Skills",
+      "Adaptability",
+      "Research and Development",
+      "Mentorship and Guidance",
+      "Problem-Solving",
+      "Fixing Technical Issues of the Customers",
+      "Sales Pitching",
+      "Building Rapport"
+    ],
+    "achievements": [
+      "With Honors (Grade 12 | 2019 - 2020)",
+      "Dean’s Lister (1st Year 2nd Semester)",
+      "Dean’s Lister (3rd Year 1st Semester)",
+      "Dean’s Lister (4th Year 1st Semester)"
+    ],
+    "internship": {
+      "title": "Accounting Intern",
+      "company": "Viskase Asia Pacific Corp.",
+      "dates": "April 2023 - July 2023",
+      "responsibilities": [
+        "Encoding Sales Invoice",
+        "Releasing Cheques",
+        "Physical Inventory Count",
+        "Filing Annual Income Tax Return"
+      ]
+    },
+    "references": [
+      {
+        "name": "Jerika Laxamana",
+        "position": "Senior Team Leader",
+        "company": "TaskUs",
+        "contact_number": "09084939241"
+      },
+      {
+        "name": "Tisha Marie Manalo",
+        "position": "Team Leader",
+        "company": "Task Us",
+        "contact_number": "09171073048"
+      }
+    ],
+    "certifications_and_licenses": [
+      "National Certificate III in Bookkeeping | 2020"
+    ],
+    "languages": [
+      "English",
+      "Filipino"
+    ]
+  }
+]

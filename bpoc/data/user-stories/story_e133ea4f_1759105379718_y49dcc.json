@@ -1,0 +1,462 @@
+{
+  "id": "story_e133ea4f_1759105379718_y49dcc",
+  "userId": "e133ea4f-1c28-442c-88cf-a6b13f305763",
+  "title": "The Digital Frontier",
+  "difficulty": "rockstar",
+  "chapters": [
+    {
+      "chapterNumber": 1,
+      "title": "The Digital Frontier",
+      "theme": "Introduction and current challenges as junior developer",
+      "difficulty": "easy",
+      "estimatedDuration": 90,
+      "sentences": [
+        {
+          "id": 1,
+          "text": "Aaron starts his new development career.",
+          "words": [
+            "Aaron",
+            "starts",
+            "his",
+            "new",
+            "development",
+            "career"
+          ],
+          "difficulty": "easy",
+          "category": "narrative"
+        },
+        {
+          "id": 2,
+          "text": "The code base seems very complex.",
+          "words": [
+            "The",
+            "code",
+            "base",
+            "seems",
+            "very",
+            "complex"
+          ],
+          "difficulty": "easy",
+          "category": "narrative"
+        },
+        {
+          "id": 3,
+          "text": "His typing speed needs improvement fast.",
+          "words": [
+            "His",
+            "typing",
+            "speed",
+            "needs",
+            "improvement",
+            "fast"
+          ],
+          "difficulty": "easy",
+          "category": "challenge"
+        },
+        {
+          "id": 4,
+          "text": "Senior developers type with amazing efficiency.",
+          "words": [
+            "Senior",
+            "developers",
+            "type",
+            "with",
+            "amazing",
+            "efficiency"
+          ],
+          "difficulty": "easy",
+          "category": "observation"
+        },
+        {
+          "id": 5,
+          "text": "Aaron decides to master touch typing.",
+          "words": [
+            "Aaron",
+            "decides",
+            "to",
+            "master",
+            "touch",
+            "typing"
+          ],
+          "difficulty": "easy",
+          "category": "decision"
+        }
+      ]
+    },
+    {
+      "chapterNumber": 2,
+      "title": "Building the Foundation",
+      "theme": "Taking first steps to improve typing skills",
+      "difficulty": "medium-easy",
+      "estimatedDuration": 120,
+      "sentences": [
+        {
+          "id": 1,
+          "text": "Aaron downloads a professional typing training program.",
+          "words": [
+            "Aaron",
+            "downloads",
+            "a",
+            "professional",
+            "typing",
+            "training",
+            "program"
+          ],
+          "difficulty": "medium-easy",
+          "category": "action"
+        },
+        {
+          "id": 2,
+          "text": "He practices coding exercises every morning before work.",
+          "words": [
+            "He",
+            "practices",
+            "coding",
+            "exercises",
+            "every",
+            "morning",
+            "before",
+            "work"
+          ],
+          "difficulty": "medium-easy",
+          "category": "routine"
+        },
+        {
+          "id": 3,
+          "text": "His fingers slowly learn the keyboard positions well.",
+          "words": [
+            "His",
+            "fingers",
+            "slowly",
+            "learn",
+            "the",
+            "keyboard",
+            "positions",
+            "well"
+          ],
+          "difficulty": "medium-easy",
+          "category": "progress"
+        },
+        {
+          "id": 4,
+          "text": "The team notices his dedication to improvement.",
+          "words": [
+            "The",
+            "team",
+            "notices",
+            "his",
+            "dedication",
+            "to",
+            "improvement"
+          ],
+          "difficulty": "medium-easy",
+          "category": "recognition"
+        },
+        {
+          "id": 5,
+          "text": "Progress feels slow but Aaron stays determined.",
+          "words": [
+            "Progress",
+            "feels",
+            "slow",
+            "but",
+            "Aaron",
+            "stays",
+            "determined"
+          ],
+          "difficulty": "medium-easy",
+          "category": "persistence"
+        }
+      ]
+    },
+    {
+      "chapterNumber": 3,
+      "title": "Overcoming the Plateau",
+      "theme": "Facing and overcoming challenges in the journey",
+      "difficulty": "medium",
+      "estimatedDuration": 150,
+      "sentences": [
+        {
+          "id": 1,
+          "text": "Complex programming syntax creates new typing challenges daily.",
+          "words": [
+            "Complex",
+            "programming",
+            "syntax",
+            "creates",
+            "new",
+            "typing",
+            "challenges",
+            "daily"
+          ],
+          "difficulty": "medium",
+          "category": "challenge"
+        },
+        {
+          "id": 2,
+          "text": "Aaron integrates typing practice with actual coding assignments.",
+          "words": [
+            "Aaron",
+            "integrates",
+            "typing",
+            "practice",
+            "with",
+            "actual",
+            "coding",
+            "assignments"
+          ],
+          "difficulty": "medium",
+          "category": "adaptation"
+        },
+        {
+          "id": 3,
+          "text": "His project manager recognizes the improved code delivery speed.",
+          "words": [
+            "His",
+            "project",
+            "manager",
+            "recognizes",
+            "the",
+            "improved",
+            "code",
+            "delivery",
+            "speed"
+          ],
+          "difficulty": "medium",
+          "category": "recognition"
+        },
+        {
+          "id": 4,
+          "text": "Debugging sessions become more efficient with faster typing.",
+          "words": [
+            "Debugging",
+            "sessions",
+            "become",
+            "more",
+            "efficient",
+            "with",
+            "faster",
+            "typing"
+          ],
+          "difficulty": "medium",
+          "category": "progress"
+        },
+        {
+          "id": 5,
+          "text": "Each small victory builds towards greater development expertise.",
+          "words": [
+            "Each",
+            "small",
+            "victory",
+            "builds",
+            "towards",
+            "greater",
+            "development",
+            "expertise"
+          ],
+          "difficulty": "medium",
+          "category": "growth"
+        }
+      ]
+    },
+    {
+      "chapterNumber": 4,
+      "title": "The Professional Breakthrough",
+      "theme": "Achieving significant milestones and recognition",
+      "difficulty": "medium-hard",
+      "estimatedDuration": 180,
+      "sentences": [
+        {
+          "id": 1,
+          "text": "Aaron's typing speed reaches an impressive ninety words per minute.",
+          "words": [
+            "Aaron's",
+            "typing",
+            "speed",
+            "reaches",
+            "an",
+            "impressive",
+            "ninety",
+            "words",
+            "per",
+            "minute"
+          ],
+          "difficulty": "medium-hard",
+          "category": "achievement"
+        },
+        {
+          "id": 2,
+          "text": "His code contributions now match senior developers in quantity.",
+          "words": [
+            "His",
+            "code",
+            "contributions",
+            "now",
+            "match",
+            "senior",
+            "developers",
+            "in",
+            "quantity"
+          ],
+          "difficulty": "medium-hard",
+          "category": "milestone"
+        },
+        {
+          "id": 3,
+          "text": "Team meetings feature Aaron's insights about efficient development practices.",
+          "words": [
+            "Team",
+            "meetings",
+            "feature",
+            "Aaron's",
+            "insights",
+            "about",
+            "efficient",
+            "development",
+            "practices"
+          ],
+          "difficulty": "medium-hard",
+          "category": "leadership"
+        },
+        {
+          "id": 4,
+          "text": "The company assigns him to lead new developer training.",
+          "words": [
+            "The",
+            "company",
+            "assigns",
+            "him",
+            "to",
+            "lead",
+            "new",
+            "developer",
+            "training"
+          ],
+          "difficulty": "medium-hard",
+          "category": "responsibility"
+        },
+        {
+          "id": 5,
+          "text": "Success brings opportunities for more challenging development projects ahead.",
+          "words": [
+            "Success",
+            "brings",
+            "opportunities",
+            "for",
+            "more",
+            "challenging",
+            "development",
+            "projects",
+            "ahead"
+          ],
+          "difficulty": "medium-hard",
+          "category": "opportunity"
+        }
+      ]
+    },
+    {
+      "chapterNumber": 5,
+      "title": "The Future Unfolds",
+      "theme": "Achievement and vision for continued growth",
+      "difficulty": "hard",
+      "estimatedDuration": 210,
+      "sentences": [
+        {
+          "id": 1,
+          "text": "Aaron's journey from junior developer to respected team leader inspires others.",
+          "words": [
+            "Aaron's",
+            "journey",
+            "from",
+            "junior",
+            "developer",
+            "to",
+            "respected",
+            "team",
+            "leader",
+            "inspires",
+            "others"
+          ],
+          "difficulty": "hard",
+          "category": "reflection"
+        },
+        {
+          "id": 2,
+          "text": "His dedication to mastering development skills transforms the entire department.",
+          "words": [
+            "His",
+            "dedication",
+            "to",
+            "mastering",
+            "development",
+            "skills",
+            "transforms",
+            "the",
+            "entire",
+            "department"
+          ],
+          "difficulty": "hard",
+          "category": "impact"
+        },
+        {
+          "id": 3,
+          "text": "The company promotes him to senior developer with special mentoring responsibilities.",
+          "words": [
+            "The",
+            "company",
+            "promotes",
+            "him",
+            "to",
+            "senior",
+            "developer",
+            "with",
+            "special",
+            "mentoring",
+            "responsibilities"
+          ],
+          "difficulty": "hard",
+          "category": "advancement"
+        },
+        {
+          "id": 4,
+          "text": "Aaron implements new efficiency standards across multiple development teams nationwide.",
+          "words": [
+            "Aaron",
+            "implements",
+            "new",
+            "efficiency",
+            "standards",
+            "across",
+            "multiple",
+            "development",
+            "teams",
+            "nationwide"
+          ],
+          "difficulty": "hard",
+          "category": "leadership"
+        },
+        {
+          "id": 5,
+          "text": "His story proves that determination and practice lead to professional excellence.",
+          "words": [
+            "His",
+            "story",
+            "proves",
+            "that",
+            "determination",
+            "and",
+            "practice",
+            "lead",
+            "to",
+            "professional",
+            "excellence"
+          ],
+          "difficulty": "hard",
+          "category": "conclusion"
+        }
+      ]
+    }
+  ],
+  "createdAt": "2025-09-29T00:22:59.718Z",
+  "isActive": false
+}

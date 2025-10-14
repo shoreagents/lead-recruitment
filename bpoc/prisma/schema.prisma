@@ -1,0 +1,814 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  email                   String                   @unique
+  first_name              String
+  last_name               String
+  full_name               String
+  location                String
+  avatar_url              String?
+  created_at              DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                @default(now()) @db.Timestamp(6)
+  phone                   String?
+  bio                     String?
+  position                String?
+  admin_level             String?                  @default("user") @db.VarChar(10)
+  completed_data          Boolean                  @default(false)
+  birthday                DateTime?                @db.Date
+  slug                    String?                  @unique
+  gender                  String?
+  gender_custom           String?
+  location_place_id       String?
+  location_lat            Float?
+  location_lng            Float?
+  location_city           String?
+  location_province       String?
+  location_country        String?
+  location_barangay       String?
+  location_region         String?
+  username                String?                  @unique
+  company                 String?                  @db.VarChar(255)
+  aiAnalysisResults       AiAnalysisResults?
+  applications            Application[]
+  bpocCulturalResults     BpocCulturalResults?
+  bpocCulturalSessions    BpocCulturalSession[]
+  bpocCulturalStats       BpocCulturalStats?
+  discPersonalitySessions DiscPersonalitySession[]
+  discPersonalityStats    DiscPersonalityStats?
+  privacySettings         PrivacySettings?
+  recruiterApplications   RecruiterApplication[]
+  recruiterJobs           RecruiterJob[]
+  resumesExtracted        ResumesExtracted?
+  resumesGenerated        ResumesGenerated?
+  savedResumes            SavedResume[]
+  typingHeroSessions      TypingHeroSession[]
+  typingHeroStats         TypingHeroStats?
+  ultimateSessions        UltimateSession[]
+  ultimateStats           UltimateStats?
+  leaderboardScore        UserLeaderboardScores?
+  workStatus              UserWorkStatus?
+
+  @@map("users")
+}
+
+model UserWorkStatus {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String                @unique(map: "user_work_status_user_uidx") @db.Uuid
+  current_employer     String?
+  current_position     String?
+  current_salary       Decimal?              @db.Decimal(12, 2)
+  notice_period_days   Int?
+  current_mood         mood_enum?
+  work_status          work_status_enum?
+  created_at           DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime              @default(now()) @db.Timestamptz(6)
+  preferred_shift      shift_enum?
+  expected_salary      String?
+  work_setup           work_setup_enum?
+  completed_data       Boolean?              @default(false)
+  work_status_new      work_status_enum_new?
+  minimum_salary_range Decimal?              @db.Decimal(12, 2)
+  maximum_salary_range Decimal?              @db.Decimal(12, 2)
+  user                 User                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "user_work_status_user_idx")
+  @@map("user_work_status")
+}
+
+model PrivacySettings {
+  id              Int       @id @default(autoincrement())
+  user_id         String    @unique @db.Uuid
+  username        String?   @default("public") @db.VarChar(20)
+  first_name      String?   @default("public") @db.VarChar(20)
+  last_name       String?   @default("only-me") @db.VarChar(20)
+  location        String?   @default("public") @db.VarChar(20)
+  job_title       String?   @default("public") @db.VarChar(20)
+  birthday        String?   @default("only-me") @db.VarChar(20)
+  age             String?   @default("only-me") @db.VarChar(20)
+  gender          String?   @default("only-me") @db.VarChar(20)
+  member_since    String?   @default("public") @db.VarChar(20)
+  resume_score    String?   @default("public") @db.VarChar(20)
+  games_completed String?   @default("public") @db.VarChar(20)
+  key_strengths   String?   @default("only-me") @db.VarChar(20)
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_privacy_settings_user_id")
+  @@map("privacy_settings")
+}
+
+model DiscPersonalityStats {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                  String    @unique @db.Uuid
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime? @default(now()) @db.Timestamptz(6)
+  total_sessions           Int       @default(0)
+  completed_sessions       Int       @default(0)
+  last_taken_at            DateTime? @db.Timestamptz(6)
+  latest_d_score           Int?
+  latest_i_score           Int?
+  latest_s_score           Int?
+  latest_c_score           Int?
+  latest_primary_type      String?
+  latest_secondary_type    String?
+  best_confidence_score    Int?
+  average_completion_time  Int?
+  consistency_trend        Decimal?  @db.Decimal(5, 2)
+  latest_ai_assessment     String?
+  latest_bpo_roles         Json?     @default("[]")
+  percentile               Decimal?  @db.Decimal(5, 2)
+  total_xp                 Int?      @default(0)
+  badges_earned            Int?      @default(0)
+  cultural_alignment_score Int?
+  authenticity_score       Int?
+  latest_session_xp        Int?      @default(0)
+  user                     User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([badges_earned], map: "idx_disc_stats_badges")
+  @@index([latest_bpo_roles], map: "idx_disc_stats_bpo_roles", type: Gin)
+  @@index([best_confidence_score], map: "idx_disc_stats_confidence")
+  @@index([cultural_alignment_score], map: "idx_disc_stats_cultural_alignment")
+  @@index([last_taken_at], map: "idx_disc_stats_last_taken")
+  @@index([percentile], map: "idx_disc_stats_percentile")
+  @@index([latest_primary_type], map: "idx_disc_stats_primary_type")
+  @@index([total_xp], map: "idx_disc_stats_total_xp")
+  @@index([user_id], map: "idx_disc_stats_user_id")
+  @@map("disc_personality_stats")
+}
+
+model DiscPersonalitySession {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String    @db.Uuid
+  created_at             DateTime? @default(now()) @db.Timestamptz(6)
+  started_at             DateTime  @db.Timestamptz(6)
+  finished_at            DateTime? @db.Timestamptz(6)
+  duration_seconds       Int?
+  total_questions        Int       @default(35)
+  d_score                Int       @default(0)
+  i_score                Int       @default(0)
+  s_score                Int       @default(0)
+  c_score                Int       @default(0)
+  primary_type           String
+  secondary_type         String?
+  confidence_score       Int?      @default(0)
+  cultural_alignment     Int?      @default(95)
+  consistency_index      Decimal?  @db.Decimal(5, 2)
+  ai_assessment          Json?     @default("{}")
+  ai_bpo_roles           Json?     @default("[]")
+  core_responses         Json?     @default("[]")
+  personalized_responses Json?     @default("[]")
+  response_patterns      Json?     @default("{}")
+  user_position          String?
+  user_location          String?
+  user_experience        String?
+  session_status         String?   @default("completed")
+  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
+  user                   User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ai_assessment], map: "idx_disc_sessions_ai_assessment", type: Gin)
+  @@index([ai_bpo_roles], map: "idx_disc_sessions_ai_bpo_roles", type: Gin)
+  @@index([confidence_score], map: "idx_disc_sessions_confidence")
+  @@index([core_responses], map: "idx_disc_sessions_core_responses", type: Gin)
+  @@index([created_at], map: "idx_disc_sessions_created_at")
+  @@index([primary_type], map: "idx_disc_sessions_primary_type")
+  @@index([response_patterns], map: "idx_disc_sessions_response_patterns", type: Gin)
+  @@index([session_status], map: "idx_disc_sessions_status")
+  @@index([user_id], map: "idx_disc_sessions_user_id")
+  @@map("disc_personality_sessions")
+}
+
+model TypingHeroStats {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                     String    @unique @db.Uuid
+  total_sessions              Int?      @default(0)
+  completed_sessions          Int?      @default(0)
+  last_played_at              DateTime? @db.Timestamptz(6)
+  best_score                  Int?
+  best_wpm                    Int?
+  best_accuracy               Decimal?  @db.Decimal(5, 2)
+  best_streak                 Int?
+  latest_score                Int?
+  latest_wpm                  Int?
+  latest_accuracy             Decimal?  @db.Decimal(5, 2)
+  latest_difficulty           String?
+  avg_wpm                     Decimal?  @db.Decimal(5, 2)
+  avg_accuracy                Decimal?  @db.Decimal(5, 2)
+  total_play_time             Int?
+  ai_analysis                 Json?
+  created_at                  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime? @default(now()) @db.Timestamptz(6)
+  total_words_correct         Int?      @default(0)
+  total_words_incorrect       Int?      @default(0)
+  most_common_correct_words   Json?     @default("[]")
+  most_common_incorrect_words Json?     @default("[]")
+  average_reaction_time       Decimal?  @db.Decimal(5, 2)
+  vocabulary_strengths        Json?     @default("[]")
+  vocabulary_weaknesses       Json?     @default("[]")
+  generated_story             String?
+  user                        User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ai_analysis], map: "idx_typing_hero_stats_ai_analysis", type: Gin)
+  @@index([best_score], map: "idx_typing_hero_stats_best_score")
+  @@index([best_wpm], map: "idx_typing_hero_stats_best_wpm")
+  @@index([last_played_at], map: "idx_typing_hero_stats_last_played")
+  @@index([user_id], map: "idx_typing_hero_stats_user_id")
+  @@index([vocabulary_strengths], map: "idx_typing_hero_stats_vocabulary_strengths", type: Gin)
+  @@index([vocabulary_weaknesses], map: "idx_typing_hero_stats_vocabulary_weaknesses", type: Gin)
+  @@map("typing_hero_stats")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model TypingHeroSession {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String    @db.Uuid
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  score            Int       @default(0)
+  wpm              Int       @default(0)
+  longest_streak   Int       @default(0)
+  correct_words    Int       @default(0)
+  wrong_words      Int       @default(0)
+  elapsed_time     Int       @default(0)
+  overall_accuracy Decimal   @default(0.00) @db.Decimal(5, 2)
+  ai_analysis      Json?     @default("{}")
+  difficulty_level String?   @default("rockstar")
+  session_status   String?   @default("completed")
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  words_correct    Json?     @default("[]")
+  words_incorrect  Json?     @default("[]")
+  user             User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([overall_accuracy], map: "idx_typing_hero_sessions_accuracy")
+  @@index([ai_analysis], map: "idx_typing_hero_sessions_ai_analysis", type: Gin)
+  @@index([created_at], map: "idx_typing_hero_sessions_created_at")
+  @@index([difficulty_level], map: "idx_typing_hero_sessions_difficulty")
+  @@index([score], map: "idx_typing_hero_sessions_score")
+  @@index([user_id], map: "idx_typing_hero_sessions_user_id")
+  @@index([words_correct], map: "idx_typing_hero_sessions_words_correct", type: Gin)
+  @@index([words_incorrect], map: "idx_typing_hero_sessions_words_incorrect", type: Gin)
+  @@index([wpm], map: "idx_typing_hero_sessions_wpm")
+  @@map("typing_hero_sessions")
+}
+
+model UltimateStats {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @unique @db.Uuid
+  total_sessions      Int       @default(0)
+  last_taken_at       DateTime? @db.Timestamptz(6)
+  smart               Int?
+  motivated           Int?
+  integrity           Int?
+  business            Int?
+  platinum_choices    Int?
+  gold_choices        Int?
+  bronze_choices      Int?
+  nightmare_choices   Int?
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  last_tier           String?
+  last_recommendation String?
+  last_client_value   String?
+  latest_competencies Json?
+  key_strengths       Json?
+  development_areas   Json?
+  user                User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_ultimate_stats_user")
+  @@map("ultimate_stats")
+}
+
+model UltimateSession {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @db.Uuid
+  started_at          DateTime? @default(now()) @db.Timestamptz(6)
+  finished_at         DateTime? @db.Timestamptz(6)
+  duration_ms         Int?
+  smart               Int?
+  motivated           Int?
+  integrity           Int?
+  business            Int?
+  platinum_choices    Int?
+  gold_choices        Int?
+  bronze_choices      Int?
+  nightmare_choices   Int?
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  tier                String?
+  tier_recommendation String?
+  client_value        String?
+  team_morale         Int?
+  client_trust        Int?
+  business_impact     Int?
+  crisis_pressure     Int?
+  key_strengths       Json?
+  development_areas   Json?
+  player_name         String?
+  avatar              String?
+  user                User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([started_at], map: "idx_ultimate_sessions_started")
+  @@index([user_id], map: "idx_ultimate_sessions_user")
+  @@map("ultimate_sessions")
+}
+
+model BpocCulturalStats {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String    @unique @db.Uuid
+  total_sessions     Int       @default(0)
+  completed_sessions Int       @default(0)
+  last_played_at     DateTime? @db.Timestamptz(6)
+  current_tier       String?
+  tier_progression   Json      @default("[]")
+  percentile         Decimal?  @db.Decimal(5, 2)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  last_c1a_us_text   String?
+  last_c1a_uk_text   String?
+  last_c1a_au_text   String?
+  last_c1a_ca_text   String?
+  last_c1b_text      String?
+  last_c1c_text      String?
+  last_c2a_text      String?
+  last_c2b_us_text   String?
+  last_c2b_uk_text   String?
+  last_c2b_au_text   String?
+  last_c2b_ca_text   String?
+  last_c3a_text      String?
+  last_c3b_text      String?
+  last_c3c_text      String?
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([percentile], map: "idx_bpoc_cultural_stats_percentile")
+  @@index([current_tier], map: "idx_bpoc_cultural_stats_tier")
+  @@index([user_id], map: "idx_bpoc_cultural_stats_user")
+  @@map("bpoc_cultural_stats")
+}
+
+model BpocCulturalSession {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String                @db.Uuid
+  started_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  finished_at         DateTime?             @db.Timestamptz(6)
+  duration_ms         Int?
+  stage_reached       Int?
+  challenge_completed Int?
+  game_state          String?
+  time_left           Int?
+  survival_status     Int?
+  interaction_count   Int?
+  tier_name           String?
+  tier_description    String?
+  achievements        Json                  @default("[]")
+  metrics             Json                  @default("{}")
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  c1a_us_text         String?
+  c1a_uk_text         String?
+  c1a_au_text         String?
+  c1a_ca_text         String?
+  c1b_text            String?
+  c1c_text            String?
+  c2a_text            String?
+  c2b_us_text         String?
+  c2b_uk_text         String?
+  c2b_au_text         String?
+  c2b_ca_text         String?
+  c3a_text            String?
+  c3b_text            String?
+  c3c_text            String?
+  results             BpocCulturalResults[]
+  user                User                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([started_at], map: "idx_bpoc_cultural_sessions_started")
+  @@index([tier_name], map: "idx_bpoc_cultural_sessions_tier")
+  @@index([user_id], map: "idx_bpoc_cultural_sessions_user")
+  @@map("bpoc_cultural_sessions")
+}
+
+model BpocCulturalResults {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String               @unique(map: "uq_bpoc_cultural_results_user") @db.Uuid
+  session_id     String?              @db.Uuid
+  model_provider String               @default("anthropic")
+  model_version  String
+  prompt         String?
+  result_json    Json                 @default("{}")
+  summary_text   String?
+  created_at     DateTime             @default(now()) @db.Timestamptz(6)
+  session        BpocCulturalSession? @relation(fields: [session_id], references: [id], onUpdate: NoAction)
+  user           User                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_bpoc_cultural_results_user_created")
+  @@map("bpoc_cultural_results")
+}
+
+model UserLeaderboardScores {
+  user_id                    String   @id @db.Uuid
+  typing_hero_score          Int      @default(0)
+  disc_personality_score     Int      @default(0)
+  profile_completion_score   Int      @default(0)
+  resume_building_score      Int      @default(0)
+  application_activity_score Int      @default(0)
+  overall_score              Int      @default(0)
+  tier                       String   @default("Bronze")
+  rank_position              Int      @default(0)
+  metrics                    Json     @default("{}")
+  created_at                 DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime @default(now()) @db.Timestamptz(6)
+  last_activity_at           DateTime @default(now()) @db.Timestamptz(6)
+  user                       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([disc_personality_score(sort: Desc)], map: "idx_user_leaderboard_disc")
+  @@index([metrics], map: "idx_user_leaderboard_metrics", type: Gin)
+  @@index([overall_score(sort: Desc)], map: "idx_user_leaderboard_overall_score")
+  @@index([rank_position], map: "idx_user_leaderboard_rank")
+  @@index([tier], map: "idx_user_leaderboard_tier")
+  @@index([typing_hero_score(sort: Desc)], map: "idx_user_leaderboard_typing")
+  @@index([updated_at(sort: Desc)], map: "idx_user_leaderboard_updated")
+  @@map("user_leaderboard_scores")
+}
+
+model AiAnalysisResults {
+  id                              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                         String            @unique @db.Uuid
+  session_id                      String
+  original_resume_id              String?           @db.Uuid
+  overall_score                   Int
+  ats_compatibility_score         Int
+  content_quality_score           Int
+  professional_presentation_score Int
+  skills_alignment_score          Int
+  key_strengths                   Json
+  strengths_analysis              Json
+  improvements                    Json
+  recommendations                 Json
+  improved_summary                String
+  salary_analysis                 Json
+  career_path                     Json
+  section_analysis                Json
+  analysis_metadata               Json?
+  portfolio_links                 Json?
+  files_analyzed                  Json?
+  created_at                      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at                      DateTime?         @default(now()) @db.Timestamp(6)
+  candidate_profile               Json?
+  skills_snapshot                 Json?
+  experience_snapshot             Json?
+  education_snapshot              Json?
+  originalResume                  ResumesExtracted? @relation(fields: [original_resume_id], references: [id], onUpdate: NoAction)
+  user                            User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_ai_analysis_results_created_at")
+  @@index([original_resume_id], map: "idx_ai_analysis_results_original_resume_id")
+  @@index([overall_score], map: "idx_ai_analysis_results_overall_score")
+  @@index([session_id], map: "idx_ai_analysis_results_session_id")
+  @@index([user_id], map: "idx_ai_analysis_results_user_id")
+  @@map("ai_analysis_results")
+}
+
+model ResumesExtracted {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String              @unique(map: "resumes_extracted_user_id_unique") @db.Uuid
+  resume_data       Json
+  original_filename String?
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  aiAnalysisResults AiAnalysisResults[]
+  user              User                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  generatedResume   ResumesGenerated[]
+
+  @@index([created_at], map: "idx_resumes_extracted_created_at")
+  @@map("resumes_extracted")
+}
+
+model ResumesGenerated {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String            @unique(map: "resumes_generated_user_id_unique") @db.Uuid
+  original_resume_id    String?           @db.Uuid
+  generated_resume_data Json
+  template_used         String?
+  generation_metadata   Json?
+  created_at            DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?         @default(now()) @db.Timestamp(6)
+  originalResume        ResumesExtracted? @relation(fields: [original_resume_id], references: [id], onUpdate: NoAction)
+  user                  User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  savedResumes          SavedResume[]
+
+  @@index([original_resume_id], map: "idx_resumes_generated_original_resume_id")
+  @@map("resumes_generated")
+}
+
+model SavedResume {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String                 @db.Uuid
+  resume_slug           String                 @unique
+  resume_title          String
+  resume_data           Json
+  template_used         String
+  is_public             Boolean?               @default(true)
+  view_count            Int?                   @default(0)
+  created_at            DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?              @default(now()) @db.Timestamp(6)
+  original_resume_id    String?                @db.Uuid
+  applications          Application[]
+  recruiterApplications RecruiterApplication[]
+  originalResume        ResumesGenerated?      @relation(fields: [original_resume_id], references: [id], onUpdate: NoAction)
+  user                  User                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([original_resume_id], map: "idx_saved_resumes_original_resume_id")
+  @@index([is_public], map: "idx_saved_resumes_public")
+  @@map("saved_resumes")
+}
+
+model Application {
+  id          String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String                  @db.Uuid
+  job_id      Int
+  resume_id   String                  @db.Uuid
+  resume_slug String
+  status      application_status_enum @default(submitted)
+  created_at  DateTime                @default(now()) @db.Timestamptz(6)
+  position    Int?                    @default(0)
+  updated_at  DateTime?               @default(now()) @db.Timestamptz(6)
+  job         ProcessedJobRequest     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resume      SavedResume             @relation(fields: [resume_id], references: [id], onUpdate: NoAction)
+  user        User                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, job_id], map: "applications_user_job_uidx")
+  @@index([job_id], map: "applications_job_idx")
+  @@index([status])
+  @@index([user_id], map: "applications_user_idx")
+  @@index([created_at], map: "idx_applications_created_at")
+  @@index([user_id, job_id, status], map: "idx_applications_user_job_status")
+  @@map("applications")
+}
+
+model RecruiterApplication {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String       @db.Uuid
+  job_id      String       @db.Uuid
+  resume_id   String       @db.Uuid
+  resume_slug String
+  status      String       @default("submitted")
+  created_at  DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime?    @default(now()) @db.Timestamptz(6)
+  job         RecruiterJob @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resume      SavedResume  @relation(fields: [resume_id], references: [id], onUpdate: NoAction)
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, job_id], map: "recruiter_applications_user_job_uidx")
+  @@map("recruiter_applications")
+}
+
+model JobRequest {
+  id                   Int                    @id @default(autoincrement())
+  company_id           String?                @db.Uuid
+  job_title            String
+  work_arrangement     work_arrangement_enum?
+  salary_min           Int?
+  salary_max           Int?
+  job_description      String
+  requirements         String[]               @default([])
+  responsibilities     String[]               @default([])
+  benefits             String[]               @default([])
+  skills               String[]               @default([])
+  experience_level     experience_level_enum?
+  application_deadline DateTime?              @db.Date
+  industry             String?
+  department           String?
+  work_type            String                 @default("full-time")
+  currency             String                 @default("PHP")
+  salary_type          String                 @default("monthly")
+  status               job_status_enum        @default(active)
+  views                Int                    @default(0)
+  applicants           Int                    @default(0)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  priority             priority_enum          @default(medium)
+  shift                shift_enum             @default(day)
+  comments             JobRequestComment[]
+  company              Member?                @relation(fields: [company_id], references: [company_id], onUpdate: NoAction)
+  processedJob         ProcessedJobRequest?
+
+  @@index([company_id], map: "idx_job_requests_company_id")
+  @@index([created_at], map: "idx_job_requests_created_at")
+  @@index([priority], map: "idx_job_requests_priority")
+  @@index([shift], map: "idx_job_requests_shift")
+  @@index([status], map: "idx_job_requests_status")
+  @@map("job_requests")
+}
+
+model ProcessedJobRequest {
+  id                   Int                    @id
+  company_id           String?                @db.Uuid
+  job_title            String
+  work_arrangement     work_arrangement_enum?
+  salary_min           Int?
+  salary_max           Int?
+  job_description      String
+  requirements         String[]               @default([])
+  responsibilities     String[]               @default([])
+  benefits             String[]               @default([])
+  skills               String[]               @default([])
+  experience_level     experience_level_enum?
+  application_deadline DateTime?              @db.Date
+  industry             String?
+  department           String?
+  work_type            String                 @default("full-time")
+  currency             String                 @default("PHP")
+  salary_type          String                 @default("monthly")
+  status               job_status_enum        @default(active)
+  views                Int                    @default(0)
+  applicants           Int                    @default(0)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  priority             priority_enum          @default(medium)
+  shift                shift_enum             @default(day)
+  applications         Application[]
+  company              Member?                @relation(fields: [company_id], references: [company_id], onUpdate: NoAction)
+  originalJob          JobRequest             @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([company_id], map: "idx_processed_job_requests_company_id")
+  @@index([created_at], map: "idx_processed_job_requests_created_at")
+  @@index([shift], map: "idx_processed_job_requests_shift")
+  @@index([status], map: "idx_processed_job_requests_status")
+  @@map("processed_job_requests")
+}
+
+model RecruiterJob {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id           String?
+  job_title            String
+  work_arrangement     work_arrangement_enum?
+  salary_min           Int?
+  salary_max           Int?
+  job_description      String
+  requirements         String[]               @default([])
+  responsibilities     String[]               @default([])
+  benefits             String[]               @default([])
+  skills               String[]               @default([])
+  experience_level     experience_level_enum?
+  application_deadline DateTime?              @db.Date
+  industry             String?
+  department           String?
+  work_type            String                 @default("full-time")
+  currency             String                 @default("PHP")
+  salary_type          String                 @default("monthly")
+  status               String                 @default("new_request")
+  views                Int                    @default(0)
+  applicants           Int                    @default(0)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  priority             priority_enum          @default(medium)
+  shift                shift_enum             @default(day)
+  recruiter_id         String                 @db.Uuid
+  applications         RecruiterApplication[]
+  recruiter            User                   @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([company_id], map: "idx_recruiter_jobs_company_id")
+  @@index([created_at], map: "idx_recruiter_jobs_created_at")
+  @@index([recruiter_id], map: "idx_recruiter_jobs_recruiter_id")
+  @@index([shift], map: "idx_recruiter_jobs_shift")
+  @@index([status], map: "idx_recruiter_jobs_status")
+  @@map("recruiter_jobs")
+}
+
+model JobRequestComment {
+  id             Int        @id @default(autoincrement())
+  job_request_id Int
+  user_id        String     @db.Uuid
+  comment        String
+  created_at     DateTime   @default(now()) @db.Timestamp(6)
+  jobRequest     JobRequest @relation(fields: [job_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([job_request_id], map: "idx_job_request_comments_job_request_id")
+  @@map("job_request_comments")
+}
+
+model Member {
+  company       String
+  created_at    DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?             @default(now()) @db.Timestamp(6)
+  company_id    String                @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobRequests   JobRequest[]
+  processedJobs ProcessedJobRequest[]
+
+  @@map("members")
+}
+
+model JobMatchResult {
+  user_id     String   @db.Uuid
+  score       Int
+  reasoning   String?
+  breakdown   Json?
+  analyzed_at DateTime @default(now()) @db.Timestamptz(6)
+  job_id      String
+
+  @@id([user_id, job_id])
+  @@index([job_id], map: "idx_job_match_results_job")
+  @@index([score], map: "idx_job_match_results_score")
+  @@index([user_id], map: "idx_job_match_results_user")
+  @@map("job_match_results")
+}
+
+enum application_status_enum {
+  submitted
+  qualified
+  for_verification  @map("for verification")
+  verified
+  initial_interview @map("initial interview")
+  final_interview   @map("final interview")
+  not_qualified     @map("not qualified")
+  passed
+  rejected
+  withdrawn
+  hired
+  closed
+  failed
+}
+
+enum experience_level_enum {
+  entry_level  @map("entry-level")
+  mid_level    @map("mid-level")
+  senior_level @map("senior-level")
+}
+
+enum job_status_enum {
+  active
+  inactive
+  closed
+  processed
+}
+
+enum leaderboard_period_enum {
+  weekly
+  monthly
+  all
+}
+
+enum member_status_enum {
+  Current_Client @map("Current Client")
+  Lost_Client    @map("Lost Client")
+}
+
+enum mood_enum {
+  Happy
+  Satisfied
+  Sad
+  Undecided
+}
+
+enum priority_enum {
+  low
+  medium
+  high
+  urgent
+}
+
+enum shift_enum {
+  day
+  night
+  both
+}
+
+enum work_arrangement_enum {
+  onsite
+  remote
+  hybrid
+}
+
+enum work_setup_enum {
+  Work_From_Office @map("Work From Office")
+  Work_From_Home   @map("Work From Home")
+  Hybrid
+  Any
+}
+
+enum work_status_enum {
+  employed
+  unemployed_looking_for_work @map("unemployed-looking-for-work")
+  freelancer
+  part_time                   @map("part-time")
+  on_leave                    @map("on-leave")
+  retired
+  student
+  career_break                @map("career-break")
+  transitioning
+  remote_worker               @map("remote-worker")
+}
+
+enum work_status_enum_new {
+  employed
+  unemployed_looking_for_work @map("unemployed-looking-for-work")
+  freelancer
+  part_time                   @map("part-time")
+  student
+}

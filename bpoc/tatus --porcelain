@@ -1,0 +1,71 @@
+[1mdiff --cc src/app/api/user/profile/route.ts[m
+[1mindex 4f384be,b67c833..0000000[m
+[1m--- a/src/app/api/user/profile/route.ts[m
+[1m+++ b/src/app/api/user/profile/route.ts[m
+[36m@@@ -13,8 -13,9 +13,9 @@@[m [mexport async function GET(request: Next[m
+  [m
+      console.log('🔍 API: Fetching profile for user:', userId)[m
+  [m
+[32m+     // Start with basic query without gender[m
+      const query = `[m
+[31m -      SELECT id, email, first_name, last_name, full_name, location, avatar_url, phone, bio, position, completed_data, birthday, created_at, updated_at[m
+[32m +      SELECT id, email, first_name, last_name, full_name, location, avatar_url, phone, bio, position, completed_data, birthday, slug, created_at, updated_at[m
+        FROM users [m
+        WHERE id = $1[m
+      `[m
+[36m@@@ -39,16 -53,17 +53,19 @@@[m
+        position: user.position,[m
+        completed_data: user.completed_data,[m
+        birthday: user.birthday,[m
+[31m-       slug: user.slug,[m
+[32m++[m
+[32m+       gender: gender,[m
+[32m++[m
+        created_at: user.created_at,[m
+        updated_at: user.updated_at[m
+[31m-     })[m
+[31m-     console.log('🔍 API: Raw database result:', user)[m
+[32m+     }[m
+[32m+     [m
+[32m+     console.log('✅ API: User profile loaded:', userProfile)[m
+  [m
+[31m-     return NextResponse.json({ user })[m
+[32m+     return NextResponse.json({ user: userProfile })[m
+    } catch (error) {[m
+      console.error('❌ API: Error fetching user profile:', error)[m
+[31m-     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })[m
+[32m+     return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })[m
+    }[m
+  }[m
+  [m
+[1mdiff --cc src/lib/database.types.ts[m
+[1mindex 897ef38,59ff80c..0000000[m
+[1m--- a/src/lib/database.types.ts[m
+[1m+++ b/src/lib/database.types.ts[m
+[36m@@@ -27,7 -27,7 +27,8 @@@[m [mexport interface Database [m
+            updated_at: string[m
+            completed_data: boolean[m
+            birthday: string | null[m
+[32m +          slug: string | null[m
+[32m+           gender: string | null[m
+          }[m
+          Insert: {[m
+            id: string[m
+[36m@@@ -46,7 -46,7 +47,8 @@@[m
+            updated_at?: string[m
+            completed_data?: boolean[m
+            birthday?: string | null[m
+[32m +          slug?: string | null[m
+[32m+           gender?: string | null[m
+          }[m
+          Update: {[m
+            id?: string[m
+[36m@@@ -65,7 -65,7 +67,8 @@@[m
+            updated_at?: string[m
+            completed_data?: boolean[m
+            birthday?: string | null[m
+[32m +          slug?: string | null[m
+[32m+           gender?: string | null[m
+          }[m
+        }[m
+        resumes_extracted: {[m

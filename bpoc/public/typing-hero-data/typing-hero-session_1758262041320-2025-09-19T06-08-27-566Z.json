@@ -1,0 +1,26 @@
+{
+  "sessionId": "session_1758262041320",
+  "timestamp": "2025-09-19T06:08:26.649Z",
+  "difficulty": "rockstar",
+  "gameStats": {
+    "wpm": 101,
+    "accuracy": 1.8,
+    "totalWords": 173,
+    "correctCount": 3,
+    "wrongCount": 118
+  },
+  "words": {
+    "correct": [
+      "said",
+      "and",
+      "more"
+    ],
+    "wrong": []
+  },
+  "summary": {
+    "totalCorrect": 3,
+    "totalWrong": 0,
+    "mostCorrectWord": "more",
+    "mostWrongWord": ""
+  }
+}

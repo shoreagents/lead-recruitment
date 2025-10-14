@@ -1,0 +1,105 @@
+[
+  {
+    "name": "Lovell Siron",
+    "email": "lovellsiron918@gmail.com",
+    "phone": "+63 920 846-6915",
+    "location": "Porac, Pampanga, Philippines",
+    "summary": "To seek employment as a Web Developer and Graphic Designer, coming with strong graphic design knowledge in Adobe Photoshop and Illustrator, and the ability to work with different programming languages such as HTML, CSS, Javascript, and PHP to create attractive and engaging websites.",
+    "skills": [
+      "Java",
+      "Python",
+      "PHP",
+      "HTML/CSS",
+      "Javascript",
+      "SQL",
+      "Adobe Photoshop",
+      "Illustrator",
+      "Lightroom",
+      "GIMP",
+      "Filmora",
+      "Adobe Premiere",
+      "Microsoft Office Suite (Word, Excel, Powerpoint)"
+    ],
+    "experience": [
+      {
+        "company": "FiAm Software Technology",
+        "position": "Intern",
+        "duration": "2021",
+        "location": "Angeles City, Pampanga",
+        "description": "Worked as a web developer intern for 3 months. In charge of making websites applying content management system such as wordpress and grav."
+      },
+      {
+        "organization": "School of Computing Student Council",
+        "position": "Councilor",
+        "duration": "2020-2021",
+        "location": "Holy Angel University",
+        "description": "Head of Creative Multimedia Arts Team. In charge of publication materials on social media of the council and graphic designing on events such as posters and teasers."
+      },
+      {
+        "organization": "University Student Council",
+        "position": "Senator",
+        "duration": "2019-2020",
+        "location": "Holy Angel University",
+        "description": "Head of Media Arts Team. In charge of publication materials in any form of media and making graphics for the university student council that can be used on events."
+      },
+      {
+        "organization": "College of Information and Communications Technology Student Council",
+        "position": "CMT Staff",
+        "duration": "2018-2019",
+        "location": "Holy Angel University",
+        "description": "Member of the Creative and Multimedia Arts Team. Helping in making graphic design for the student council on events such as college days."
+      }
+    ],
+    "education": [
+      {
+        "institution": "Holy Angel University",
+        "location": "Angeles, Pampanga",
+        "degree": "Bachelor of Science in Information Technology",
+        "major": "Web Development",
+        "year": "2018-2022"
+      },
+      {
+        "institution": "Holy Angel University",
+        "location": "Angeles, Pampanga",
+        "degree": "Senior High School",
+        "major": "Science, Technology, Engineering, and Mathematics",
+        "year": "2016-2018"
+      },
+      {
+        "institution": "Holy Angel University",
+        "location": "Angeles, Pampanga",
+        "degree": "Junior High School",
+        "year": "2012-2016"
+      }
+    ],
+    "languages": [
+      "Java",
+      "Python",
+      "PHP",
+      "HTML/CSS",
+      "Javascript",
+      "SQL"
+    ],
+    "graphic_design": [
+      "Adobe Photoshop",
+      "Illustrator",
+      "Lightroom",
+      "GIMP"
+    ],
+    "video_and_other_software": [
+      "Filmora",
+      "Adobe Premiere",
+      "Microsoft Office Suite (Word, Excel, Powerpoint)"
+    ],
+    "reference": {
+      "name": "Kevin Aldrin G. Espinosa, MIT",
+      "position": "Assistant Professor",
+      "role": "Program Coordinator, BS Information Technology",
+      "institution": "Holy Angel University",
+      "location": "Angeles City",
+      "phone": "(045) - 888-8691 local 1387",
+      "email": "kevinaldrin.espinosa@live.com"
+    },
+    "website": "https://www.lovellsiron.com/"
+  }
+]
