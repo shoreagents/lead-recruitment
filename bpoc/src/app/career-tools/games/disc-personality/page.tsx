@@ -908,11 +908,17 @@ Create a comprehensive 3-paragraph assessment that:
 6. IMPORTANT: Always use full DISC terms (Dominance, Influence, Steadiness, Conscientiousness) instead of just initials (D, I, S, C)
 
 Additionally, provide these specific sections:
-- CORE TRAITS: List 3-4 key personality traits based on their actual responses and patterns
-- CULTURAL STRENGTHS: Explain 2-3 specific Filipino cultural values they embody based on their choices
-- ANIMAL PERSONALITY REASON: Based on their primary type (${results.primaryType}), explain WHY they became their specific animal (${results.primaryType === 'D' ? 'Eagle' : results.primaryType === 'I' ? 'Peacock' : results.primaryType === 'S' ? 'Turtle' : 'Owl'}) and what this reveals about their authentic self. Use the animal metaphor to describe their natural instincts, decision-making patterns, and how they navigate challenges. Make it personal and insightful. Format this section in bullet points for easy reading.
+- CORE TRAITS: List 3-4 key personality traits based on their actual responses and patterns. For each trait, provide evidence from their response patterns. Examples: "Strategic Decision-Maker (evidenced by balanced Dominance/Conscientiousness pattern)", "Analytical Problem-Solver (reflected in Conscientiousness-type response patterns)", "Natural Leader (demonstrated through consistent Dominance choices)", "Team Collaborator (shown in Steadiness and Influence responses)", "Social Connector (evidenced by Influence-dominant patterns)". Always include the specific DISC pattern evidence in parentheses.
 
-IMPORTANT FORMATTING: For Filipino cultural terms, always provide English translations in parentheses for consistency (e.g., "pakikisama (ability to get along)", "malasakit (genuine care)", "bayanihan (community spirit)")
+- CULTURAL STRENGTHS: Explain 2-3 specific Filipino cultural values they embody based on their choices. Reference their actual response patterns and how they align with Filipino workplace values like pakikisama (ability to get along), malasakit (genuine care), bayanihan (community spirit), husay at tiyaga (excellence and perseverance), and tapang at tiyaga (courage and perseverance).
+
+- ANIMAL PERSONALITY ANALYSIS: Based on their primary type (${results.primaryType}), explain WHY they became their specific animal (${results.primaryType === 'D' ? 'Eagle' : results.primaryType === 'I' ? 'Peacock' : results.primaryType === 'S' ? 'Turtle' : 'Owl'}) and what this reveals about their authentic self. Use the animal metaphor to describe their natural instincts, decision-making patterns, and how they navigate challenges. Make it personal and insightful. Format this section in bullet points for easy reading. Include specific examples from their response patterns that demonstrate their animal personality traits.
+
+IMPORTANT FORMATTING: 
+- For Filipino cultural terms, always provide English translations in parentheses for consistency (e.g., "pakikisama (ability to get along)", "malasakit (genuine care)", "bayanihan (community spirit)")
+- Always use full DISC terminology: "Dominance" not "D", "Influence" not "I", "Steadiness" not "S", "Conscientiousness" not "C"
+- For CORE TRAITS, always include evidence in parentheses showing which DISC patterns support each trait
+- For ANIMAL PERSONALITY ANALYSIS, reference specific response patterns and timing data that demonstrate their animal characteristics
 
 Make it deeply personal and actionable based on their actual choices.`;
 
@@ -1507,39 +1513,93 @@ Make it deeply personal and actionable based on their actual choices.`;
                   
                   <div className="bg-white/5 rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-green-300 mb-2">Your Cultural Strengths</h4>
-                    <p className="text-gray-300">
+                    <div className="text-gray-300">
                       {aiAssessment && aiAssessment.includes('CULTURAL STRENGTHS:') ? (
-                        // Extract AI-generated cultural strengths
-                        aiAssessment
-                          .split('CULTURAL STRENGTHS:')[1]
-                          ?.split('ANIMAL PERSONALITY REASON')[0] // Remove animal personality reason section
-                          ?.split('\n')
-                          .filter(line => {
-                            const trimmedLine = line.trim();
-                            // Filter out any lines that contain animal references or personality type information
-                            return trimmedLine && 
-                                   !trimmedLine.toLowerCase().includes('owl') &&
-                                   !trimmedLine.toLowerCase().includes('eagle') &&
-                                   !trimmedLine.toLowerCase().includes('peacock') &&
-                                   !trimmedLine.toLowerCase().includes('turtle') &&
-                                   !trimmedLine.toLowerCase().includes('dominance') &&
-                                   !trimmedLine.toLowerCase().includes('influence') &&
-                                   !trimmedLine.toLowerCase().includes('steadiness') &&
-                                   !trimmedLine.toLowerCase().includes('conscientiousness');
-                          })
-                          .join(' ')
-                          .trim()
+                        (() => {
+                          // Extract the cultural strengths section
+                          const culturalSection = aiAssessment
+                            .split('CULTURAL STRENGTHS:')[1]
+                            ?.split('ANIMAL PERSONALITY ANALYSIS')[0] // Remove animal personality analysis section
+                            ?.trim();
+                          
+                          if (culturalSection) {
+                            // Clean up the content and display as bullet points
+                            const cleanCultural = culturalSection
+                              .replace(/^[^:]*:\s*/, '') // Remove everything before the first colon
+                              .trim();
+                            
+                            // Split by bullet points and display each as a separate line
+                            const bulletPoints = cleanCultural
+                              .split(/(?<=^|\n)\s*[-•*]\s+/)
+                              .map((point: string) => point.trim())
+                              .filter((point: string) => point.length > 0);
+                            
+                            return (
+                              <div className="space-y-3">
+                                {bulletPoints.map((point: string, bulletIndex: number) => (
+                                  <div key={bulletIndex} className="flex items-start gap-3">
+                                    <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
+                                    <span 
+                                      className="text-gray-300 leading-relaxed"
+                                      dangerouslySetInnerHTML={{
+                                        __html: point
+                                          .replace(/\b(pakikisama|malasakit|bayanihan|kapwa|utang na loob|hiya|pagkamatiyaga|tiyaga|husay at tiyaga|tapang at tiyaga)\b/gi, 
+                                            '<span class="text-purple-400 font-semibold">$1</span>')
+                                          .replace(/\b(ability to get along|genuine care|community spirit|shared identity|debt of gratitude|sense of shame|relating to others|patience|perseverance|excellence and perseverance|courage and perseverance)\b/gi, 
+                                            '<span class="text-pink-400 font-medium">$1</span>')
+                                          .replace(/\b(Filipino|cultural|values|tradition|heritage|workplace)\b/gi, 
+                                            '<span class="text-yellow-400 font-medium">$1</span>')
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          
+                          // Fallback if no specific cultural strengths found
+                          return 'Your Filipino cultural strengths are being analyzed.';
+                        })()
                       ) : (
                         // Fallback to hardcoded cultural strengths
-                        <>
-                          {personalityType.title === "The Sky Dominator" && "You're the natural 'tagapamuno' who takes charge during challenges. Your 'diskarte' mentality helps you find solutions where others see obstacles."}
-                          {personalityType.title === "The Social Star" && "You embody the spirit of 'pakikipagkapwa' - connecting with others naturally. Your warmth and enthusiasm make you perfect for building relationships in any setting."}
-                          {personalityType.title === "The Steady Guardian" && "You represent the value of 'malasakit' - caring for others consistently. Your reliability and patience make you the foundation that teams depend on."}
-                          {personalityType.title === "The Wise Analyst" && "You reflect the trait of being 'matalino' - not just smart, but wise. Your attention to detail and systematic approach ensures quality in everything you do."}
-                        </>
+                        <div className="space-y-3">
+                          {personalityType.title === "The Sky Dominator" && (
+                            <div className="flex items-start gap-3">
+                              <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
+                              <span className="text-gray-300 leading-relaxed">
+                                You're the natural <span className="text-purple-400 font-semibold">tagapamuno</span> who takes charge during challenges. Your <span className="text-yellow-400 font-medium">diskarte</span> mentality helps you find solutions where others see obstacles.
+                              </span>
+                            </div>
+                          )}
+                          {personalityType.title === "The Social Star" && (
+                            <div className="flex items-start gap-3">
+                              <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
+                              <span className="text-gray-300 leading-relaxed">
+                                You embody the spirit of <span className="text-purple-400 font-semibold">pakikipagkapwa</span> - connecting with others naturally. Your warmth and enthusiasm make you perfect for building relationships in any setting.
+                              </span>
+                            </div>
+                          )}
+                          {personalityType.title === "The Steady Guardian" && (
+                            <div className="flex items-start gap-3">
+                              <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
+                              <span className="text-gray-300 leading-relaxed">
+                                You represent the value of <span className="text-purple-400 font-semibold">malasakit</span> - caring for others consistently. Your reliability and patience make you the foundation that teams depend on.
+                              </span>
+                            </div>
+                          )}
+                          {personalityType.title === "The Wise Analyst" && (
+                            <div className="flex items-start gap-3">
+                              <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
+                              <span className="text-gray-300 leading-relaxed">
+                                You reflect the trait of being <span className="text-purple-400 font-semibold">matalino</span> - not just smart, but wise. Your attention to detail and systematic approach ensures quality in everything you do.
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
+
 
 				{/* AI Assessment Section - Show loading or content */}
           <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-6">
@@ -1716,67 +1776,159 @@ Make it deeply personal and actionable based on their actual choices.`;
                      return !paragraph.toLowerCase().includes('core traits:') && 
                             !paragraph.toLowerCase().includes('cultural strengths:');
                    }).map((paragraph: string, index: number) => {
-                     // Check if this is the ANIMAL PERSONALITY REASON section
-                     if (paragraph.toLowerCase().includes('animal personality reason')) {
-                       // Extract the content after the section title
-                       const reasonContent = paragraph
-                         .split(/animal personality reason[:\s]*/i)[1]
-                         ?.trim();
+                     // Enhanced animal personality analysis logic (copied from profile page)
+                     const isAnimalAnalysis = paragraph.toLowerCase().includes('personality analysis') || 
+                                            paragraph.toLowerCase().includes('owl personality') ||
+                                            paragraph.toLowerCase().includes('eagle personality') ||
+                                            paragraph.toLowerCase().includes('peacock personality') ||
+                                            paragraph.toLowerCase().includes('turtle personality') ||
+                                            paragraph.toLowerCase().includes('animal personality reason');
+                     
+                     if (isAnimalAnalysis) {
+                       // Get the user's primary type and animal data
+                       const userPrimaryType = discResult.primaryType;
+                       const personalityType = ANIMAL_PERSONALITIES[userPrimaryType as keyof typeof ANIMAL_PERSONALITIES];
+                       const animalName = personalityType.animal.replace(/[🦅🦚🐢🦉]/g, '').trim();
                        
-                       if (reasonContent) {
-                         // Get personality type information for inline display
-                         const personalityType = ANIMAL_PERSONALITIES[discResult.primaryType as keyof typeof ANIMAL_PERSONALITIES];
-                         const animalName = personalityType.animal.replace(/[🦅🦚🐢🦉]/g, '').trim();
-                         const discType = discResult.primaryType === 'D' ? 'Dominance' : 
-                                         discResult.primaryType === 'I' ? 'Influence' : 
-                                         discResult.primaryType === 'S' ? 'Steadiness' : 'Conscientiousness';
+                       // Create animal mapping for fallback content generation
+                       const animalMap = {
+                         'D': { emoji: '🦅', name: 'EAGLE', traits: 'leadership instincts and decisive nature' },
+                         'I': { emoji: '🦚', name: 'PEACOCK', traits: 'social influence and team-building abilities' },
+                         'S': { emoji: '🐢', name: 'TURTLE', traits: 'reliability and steady support' },
+                         'C': { emoji: '🦉', name: 'OWL', traits: 'analytical thinking and systematic approach' }
+                       };
+                       
+                       let userAnimalData = animalMap[userPrimaryType as keyof typeof animalMap] || animalMap['D'];
+                       let userAnimalName = userAnimalData.name;
+                       let userAnimalTraits = userAnimalData.traits;
+                       
+                       // Try to extract the actual AI assessment content from the full assessment
+                       let animalContent = '';
+                       
+                       // Look for the ANIMAL PERSONALITY REASON section specifically
+                       let animalReasonParagraph = aiAssessment.split('\n\n').find((paragraph: string) => 
+                         paragraph.toLowerCase().includes('animal personality reason')
+                       );
+                       
+                       if (animalReasonParagraph) {
+                         // Extract the content after the section title
+                         const reasonContent = animalReasonParagraph
+                           .split(/animal personality reason[:\s]*/i)[1]
+                           ?.trim();
                          
-                         // Debug logging to check the values
-                         console.log('🔍 DISC Result Debug:');
-                         console.log('📊 Primary Type:', discResult.primaryType);
-                         console.log('📊 Scores:', discResult.scores);
-                         console.log('📊 Calculated DISC Type:', discType);
-                         console.log('📊 Animal Name:', animalName);
-                         console.log('📊 Title will be:', `Animal Personality Reason (${animalName} - ${discType === 'Dominance' ? 'High Dominance' : discType === 'Influence' ? 'High Influence' : discType === 'Steadiness' ? 'High Steadiness' : 'High Conscientiousness'})`);
+                         if (reasonContent) {
+                           // Parse bullet points from the database content
+                           const bulletPoints = reasonContent
+                             .split('\n')
+                             .map((line: string) => line.trim())
+                             .filter((line: string) => line && line.startsWith('•'))
+                             .map((line: string) => line.replace(/^•\s*/, '').trim())
+                             .filter((line: string) => line.length > 0);
+                           
+                           if (bulletPoints.length > 0) {
+                             animalContent = bulletPoints.join('\n');
+                           } else {
+                             animalContent = reasonContent;
+                           }
+                         }
+                       }
+                       
+                       // If not found, try alternative patterns
+                       let alternativeParagraph = null;
+                       if (!animalContent || animalContent.length < 10) {
+                         // Try to find any paragraph that contains animal personality analysis
+                         alternativeParagraph = aiAssessment.split('\n\n').find((paragraph: string) => {
+                           const lowerParagraph = paragraph.toLowerCase();
+                           return (lowerParagraph.includes('animal personality') && 
+                                   (lowerParagraph.includes('analysis') || 
+                                    lowerParagraph.includes('reason') ||
+                                    lowerParagraph.includes('instincts'))) ||
+                                  (lowerParagraph.includes('eagle') && lowerParagraph.includes('personality')) ||
+                                  (lowerParagraph.includes('peacock') && lowerParagraph.includes('personality')) ||
+                                  (lowerParagraph.includes('turtle') && lowerParagraph.includes('personality')) ||
+                                  (lowerParagraph.includes('owl') && lowerParagraph.includes('personality'));
+                         });
                          
-                         // Split by bullet points and display each as a separate line
-                         const bulletPoints = reasonContent
-                           .split(/[•\-\*]/)
-                           .map(point => point.trim())
-                           .filter(point => point.length > 0)
-                           .filter(point => {
-                             // Remove bullet points that are just personality type references
-                             const lowerPoint = point.toLowerCase();
-                             return !(lowerPoint.includes('(peacock') || 
-                                     lowerPoint.includes('(eagle') ||
-                                     lowerPoint.includes('(turtle') ||
-                                     lowerPoint.includes('(owl') ||
-                                     lowerPoint.includes('influence primary):') ||
-                                     lowerPoint.includes('dominance primary):') ||
-                                     lowerPoint.includes('steadiness primary):') ||
-                                     lowerPoint.includes('conscientiousness primary):') ||
-                                     lowerPoint.includes('high influence):') ||
-                                     lowerPoint.includes('high dominance):') ||
-                                     lowerPoint.includes('high steadiness):') ||
-                                     lowerPoint.includes('high conscientiousness):'));
-                           });
+                         if (alternativeParagraph) {
+                           // Extract content after any animal personality header
+                           const content = alternativeParagraph
+                             .split(/animal personality[:\s]*/i)[1] ||
+                             alternativeParagraph
+                             .split(/personality[:\s]*/i)[1] ||
+                             alternativeParagraph;
+                           
+                           if (content && content.trim().length > 10) {
+                             animalContent = content.trim();
+                           }
+                         }
+                       }
+                       
+                       // Final fallback: Look for specific animal name in assessment
+                       if (!animalContent || animalContent.length < 10) {
+                         // Try to find content that mentions the specific animal
+                         const animalSpecificParagraph = aiAssessment.split('\n\n').find((paragraph: string) => {
+                           const lowerParagraph = paragraph.toLowerCase();
+                           const animalLower = userAnimalName.toLowerCase();
+                           return lowerParagraph.includes(animalLower) && 
+                                  (lowerParagraph.includes('personality') || 
+                                   lowerParagraph.includes('instincts') ||
+                                   lowerParagraph.includes('natural'));
+                         });
                          
+                         if (animalSpecificParagraph) {
+                           // Extract content after the animal name
+                           const content = animalSpecificParagraph
+                             .split(new RegExp(`${userAnimalName}[:\s]*`, 'i'))[1] ||
+                             animalSpecificParagraph;
+                           
+                           if (content && content.trim().length > 10) {
+                             animalContent = content.trim();
+                           }
+                         }
+                       }
+                       
+                       // Final fallback: Generate correct animal personality reason if database content not found
+                       if (!animalContent || animalContent.length < 10) {
+                         const userName = 'you';
+                         animalContent = `• Like the ${userAnimalName}'s natural instincts, ${userName} demonstrate ${userAnimalTraits} in your decision-making patterns
+• The ${userAnimalName} personality reflects ${userName}'s authentic approach to challenges and social interactions
+• This ${userPrimaryType === 'D' ? 'dominance' : userPrimaryType === 'I' ? 'influence' : userPrimaryType === 'S' ? 'steadiness' : 'conscientiousness'}-dominant profile shows how ${userName} naturally navigate professional and personal situations`;
+                       }
+                       
+                       // Clean up the content
+                       const cleanAnimal = animalContent.trim();
+                       
+                       if (cleanAnimal && cleanAnimal.length > 10) {
                          return (
                            <div key={index} className="space-y-2">
                              <h4 className="text-lg font-semibold text-purple-300 mb-3">
-                               ANIMAL PERSONALITY REASON ({animalName}):
+                               ANIMAL PERSONALITY ({userAnimalName}) ANALYSIS:
                              </h4>
                              <div className="space-y-4">
-                               {bulletPoints.map((point, bulletIndex) => (
-                                 <div key={bulletIndex} className="flex items-start gap-2 mb-6">
-                                   <span className="text-purple-400 mt-1">•</span>
-                                   <span className="text-gray-300 leading-relaxed">{point}</span>
-                                 </div>
-                               ))}
+                               {cleanAnimal
+                                 .split('\n')
+                                 .filter((line: string) => {
+                                   const trimmed = line.trim();
+                                   // Filter out header lines that might be redundant
+                                   return trimmed && 
+                                          !trimmed.toLowerCase().includes('animal personality reason') &&
+                                          !trimmed.toLowerCase().includes('animal personality -') &&
+                                          !trimmed.toLowerCase().includes('personality analysis') &&
+                                          !trimmed.match(/^[A-Z\s]+:$/); // Filter out lines that are just headers like "ANIMAL PERSONALITY REASON:"
+                                 })
+                                 .map((point: string, bulletIndex: number) => (
+                                   <div key={bulletIndex} className="flex items-start gap-2 mb-6">
+                                     <span className="text-purple-400 mt-1">•</span>
+                                     <span className="text-gray-300 leading-relaxed">{point.replace(/^•\s*/, '')}</span>
+                                   </div>
+                                 ))}
                              </div>
                            </div>
                          );
                        }
+                       
+                       // If no meaningful content after cleaning, don't display
+                       return null;
                      }
                      
                      // Highlight important phrases within the paragraph
@@ -1789,37 +1941,6 @@ Make it deeply personal and actionable based on their actual choices.`;
                          .replace(/\b(filipino|bpo|workplace|culture|cultural)\b/gi, 
                            '<span class="text-yellow-400 font-medium">$1</span>');
                      };
-                     
-                     // Check if this paragraph contains "OWL PERSONALITY ANALYSIS" or similar animal analysis
-                     const isAnimalAnalysis = paragraph.toLowerCase().includes('personality analysis') || 
-                                            paragraph.toLowerCase().includes('owl personality') ||
-                                            paragraph.toLowerCase().includes('eagle personality') ||
-                                            paragraph.toLowerCase().includes('peacock personality') ||
-                                            paragraph.toLowerCase().includes('turtle personality');
-                     
-                     if (isAnimalAnalysis) {
-                       // Add Animal Personality Reason Header before the animal analysis
-                       const personalityType = ANIMAL_PERSONALITIES[discResult.primaryType as keyof typeof ANIMAL_PERSONALITIES];
-                       const animalName = personalityType.animal.replace(/[🦅🦚🐢🦉]/g, '').trim();
-                       const discType = discResult.primaryType === 'D' ? 'Dominance' : 
-                                       discResult.primaryType === 'I' ? 'Influence' : 
-                                       discResult.primaryType === 'S' ? 'Steadiness' : 'Conscientiousness';
-                       
-                       return (
-                         <div key={index}>
-                           <h4 className="text-lg font-semibold text-purple-300 mb-3">
-                             ANIMAL PERSONALITY REASON ({animalName}):
-                           </h4>
-                           <div dangerouslySetInnerHTML={{ 
-                             __html: highlightText(paragraph)
-                               .replace(/•\s*/g, '<div class="mb-4">• ') // Add spacing after each bullet
-                               .replace(/\n\n/g, '</div><div class="mb-4">') // Add paragraph spacing
-                               .replace(/^/, '<div class="mb-4">') // Start with div
-                               .replace(/$/, '</div>') // End with div
-                           }} />
-                         </div>
-                       );
-                     }
                      
                      return (
                        <div key={index} dangerouslySetInnerHTML={{ 
