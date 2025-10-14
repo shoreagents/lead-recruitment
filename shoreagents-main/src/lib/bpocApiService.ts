@@ -75,22 +75,23 @@ export interface BPOCApiResponse {
   }
 }
 
-// Fetch all employee data from BPOC API
+// Fetch all employee data from BPOC database via local API
 export async function fetchBPOCEmployeeData(): Promise<BPOCUser[]> {
   try {
-    const response = await fetch('https://www.bpoc.io/api/public/user-data')
+    // Use local API that connects directly to BPOC database
+    const response = await fetch('/api/bpoc-candidates')
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
-    const data: BPOCApiResponse = await response.json()
+    const data = await response.json()
     
     if (!data.success) {
       throw new Error('API returned unsuccessful response')
     }
     
-    console.log('✅ Fetched BPOC employee data:', data.data.length, 'employees')
+    console.log('✅ Fetched BPOC employee data from database:', data.data.length, 'employees')
     return data.data
   } catch (error) {
     console.error('❌ Error fetching BPOC employee data:', error)

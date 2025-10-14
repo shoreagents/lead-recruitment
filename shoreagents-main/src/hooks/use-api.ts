@@ -350,7 +350,8 @@ interface BPOCUser {
 }
 
 const fetchBPOCEmployeeData = async (): Promise<BPOCUser[]> => {
-  const response = await fetch('https://www.bpoc.io/api/public/user-data');
+  // Use local API that connects directly to BPOC database
+  const response = await fetch('/api/bpoc-candidates');
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -393,7 +394,9 @@ export const useBPOCEmployeeById = (employeeId: string) => {
 
 // Employee Card Data Hook for Talent Pool
 const fetchEmployeeCardData = async (): Promise<EmployeeCardData[]> => {
-  const response = await fetch('https://www.bpoc.io/api/public/user-data');
+  // Use local API that connects directly to BPOC database
+  // This is faster than calling the external BPOC API
+  const response = await fetch('/api/bpoc-candidates');
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);

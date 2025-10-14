@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getBPOCPool } from '@/lib/bpoc-database';
 
 export interface BPOCUser {
   user_id: string
@@ -153,6 +154,71 @@ function calculateMatchScore(candidatePosition: string, targetRole: string, cand
   return 20
 }
 
+/**
+ * GET endpoint - Fetch all candidates directly from BPOC database
+ * Used by /we-got-talent page for displaying talent pool
+ */
+export async function GET() {
+  try {
+    console.log('🔍 Fetching candidates directly from BPOC database...');
+    
+    const pool = getBPOCPool();
+    
+    // Query the same view that the BPOC public API uses
+    // This ensures data consistency and privacy filtering
+    const query = `
+      SELECT 
+        user_id, first_name, last_name, full_name, location, avatar_url, bio, position,
+        current_position, work_status, expected_salary, overall_score, 
+        skills_snapshot, experience_snapshot, key_strengths, improvements, 
+        recommendations, improved_summary, user_created_at, work_status_completed,
+        -- Additional fields for comprehensive candidate profiles
+        ats_compatibility_score, content_quality_score, professional_presentation_score,
+        skills_alignment_score, strengths_analysis, salary_analysis, career_path
+      FROM public.v_user_complete_data
+      WHERE user_id IS NOT NULL
+      ORDER BY overall_score DESC NULLS LAST, user_created_at DESC
+      LIMIT 200
+    `;
+    
+    const result = await pool.query(query);
+    
+    console.log(`✅ Fetched ${result.rows.length} candidates from BPOC database`);
+    
+    return NextResponse.json({
+      success: true,
+      data: result.rows,
+      total: result.rows.length,
+      source: 'direct-database',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching candidates from BPOC database:', error);
+    
+    // Provide helpful error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isConnectionError = errorMessage.includes('ECONNREFUSED') || 
+                              errorMessage.includes('BPOC_DATABASE_URL');
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to fetch candidates from database',
+        details: errorMessage,
+        hint: isConnectionError 
+          ? 'Check that BPOC_DATABASE_URL is set correctly in your .env.local file'
+          : 'Database query failed. Check server logs for details.'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST endpoint - Get candidate recommendations for a specific role
+ * Used by pricing calculator for matching candidates to job positions
+ */
 export async function POST(request: NextRequest) {
   try {
     const { role, level, industry } = await request.json();
@@ -166,28 +232,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 BPOC Candidates API: Searching for ${role} (${level} level) in ${industry || 'any'} industry`);
 
-    // Fetch BPOC data
+    // Fetch BPOC data from database (not external API)
     let bpocEmployees: BPOCUser[] = []
     try {
-      const response = await fetch('https://www.bpoc.io/api/public/user-data')
+      const pool = getBPOCPool();
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      // Query database directly for better performance
+      const query = `
+        SELECT 
+          user_id, first_name, last_name, full_name, location, avatar_url, bio, position,
+          current_position, work_status, expected_salary, overall_score, 
+          skills_snapshot, experience_snapshot, work_status_completed
+        FROM public.v_user_complete_data
+        WHERE user_id IS NOT NULL
+        ORDER BY overall_score DESC NULLS LAST
+        LIMIT 500
+      `;
       
-      const data = await response.json()
+      const result = await pool.query(query);
+      bpocEmployees = result.rows;
       
-      if (!data.success) {
-        throw new Error('API returned unsuccessful response')
-      }
-      
-      bpocEmployees = data.data
-      console.log(`📋 BPOC Candidates API: Fetched ${bpocEmployees.length} total employees from BPOC`);
+      console.log(`📋 BPOC Candidates API: Fetched ${bpocEmployees.length} total employees from BPOC database`);
       
     } catch (error) {
-      console.error('❌ Error fetching BPOC data:', error);
+      console.error('❌ Error fetching BPOC data from database:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch BPOC candidate data' },
+        { error: 'Failed to fetch BPOC candidate data from database' },
         { status: 500 }
       );
     }
