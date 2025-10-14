@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Building2, Users, FileText, TrendingUp } from 'lucide-react'
+import { Building2, Users, FileText, TrendingUp, Trophy, MessageCircle } from 'lucide-react'
 
 export default function RecruiterFooter() {
   return (
@@ -18,7 +18,7 @@ export default function RecruiterFooter() {
       
       <div className="container mx-auto relative z-10">
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+        <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Company Information */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -58,12 +58,13 @@ export default function RecruiterFooter() {
             className="space-y-4"
           >
             <h3 className="font-bold text-white text-2xl drop-shadow-lg mb-6">Recruiter Tools</h3>
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { href: "/recruiter/dashboard", text: "Dashboard", icon: TrendingUp },
-                { href: "/recruiter/jobs", text: "Job Management", icon: FileText },
-                { href: "/recruiter/applicants", text: "Applicants", icon: Users },
-                { href: "/recruiter/analytics", text: "Analytics", icon: TrendingUp }
+                { href: "/recruiter/post-job", text: "Post Job", icon: FileText },
+                { href: "/recruiter/applications", text: "Applications", icon: Users },
+                { href: "/recruiter/candidates", text: "Candidates", icon: Users },
+                { href: "/recruiter/leaderboard", text: "Leaderboard", icon: Trophy }
               ].map((link, index) => (
                 <motion.div
                   key={link.href}
@@ -107,9 +108,6 @@ export default function RecruiterFooter() {
               </Link>
               <Link href="/terms-and-conditions" className="text-slate-200 hover:text-white transition-all duration-300 text-lg font-semibold">
                 Terms and Conditions
-              </Link>
-              <Link href="/recruiter/terms" className="text-slate-200 hover:text-white transition-all duration-300 text-lg font-semibold">
-                Recruiter Terms
               </Link>
             </div>
           </div>

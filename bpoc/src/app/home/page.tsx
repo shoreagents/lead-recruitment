@@ -274,11 +274,11 @@ function HomePageContent() {
         } catch (fetchError) {
           console.error('❌ HomePage: Fetch error occurred:', fetchError)
           console.error('❌ HomePage: Fetch error details:', {
-            name: fetchError?.name,
-            message: fetchError?.message,
-            stack: fetchError?.stack,
+            name: (fetchError as any)?.name,
+            message: (fetchError as any)?.message,
+            stack: (fetchError as any)?.stack,
             type: typeof fetchError,
-            constructor: fetchError?.constructor?.name,
+            constructor: (fetchError as any)?.constructor?.name,
             url: `/api/user/profile?userId=${user.id}`,
             userId: user.id
           })
@@ -343,8 +343,8 @@ function HomePageContent() {
           const errorInfo = {
             status: response.status,
             statusText: response.statusText,
-            error: errorData.error || errorText || 'Unknown error',
-            details: errorData.details || 'No details available',
+            error: (errorData as any)?.error || errorText || 'Unknown error',
+            details: (errorData as any)?.details || 'No details available',
             url: `/api/user/profile?userId=${user.id}`,
             userId: user.id,
             timestamp: new Date().toISOString(),
@@ -403,8 +403,8 @@ function HomePageContent() {
               
               // Fallback to email if no name data at all
               if (!fullName && !firstName && !lastName) {
-                fullName = user.email
-                firstName = user.email.split('@')[0]
+                fullName = user.email || 'User'
+                firstName = user.email?.split('@')[0] || 'User'
                 lastName = ''
               }
               
@@ -515,9 +515,9 @@ function HomePageContent() {
         // Better error handling with more specific error information
         if (error instanceof Error) {
           console.error('❌ HomePage: Error details:', {
-            message: error.message,
-            name: error.name,
-            stack: error.stack,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            name: error instanceof Error ? error.name : 'Unknown',
+            stack: error instanceof Error ? error.stack : undefined,
             userId: user.id
           })
           
@@ -575,7 +575,7 @@ function HomePageContent() {
     setShowProfileModal(false)
     // Refresh the user profile data
     if (userProfile) {
-      setUserProfile(prev => prev ? { ...prev, completed_data: true } : null)
+      setUserProfile((prev: any) => prev ? { ...prev, completed_data: true } : null)
     }
   }
 
@@ -608,8 +608,8 @@ function HomePageContent() {
             console.error('❌ HomePage: Failed to refresh profile after update:', {
               status: response.status,
               statusText: response.statusText,
-              error: errorData.error || errorText || 'Unknown error',
-              details: errorData.details || 'No details available',
+              error: (errorData as any)?.error || errorText || 'Unknown error',
+              details: (errorData as any)?.details || 'No details available',
               url: `/api/user/profile?userId=${user.id}`,
               userId: user.id,
               timestamp: new Date().toISOString()
@@ -832,7 +832,7 @@ function HomePageContent() {
               Why Choose <span className="gradient-text">BPOC.IO</span>
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              See how we compare to traditional job platforms and other career tools.
+              See how we compare to traditional job platforms and other career games.
             </p>
           </motion.div>
 
@@ -872,7 +872,7 @@ function HomePageContent() {
                     <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
                       <X className="w-4 h-4 text-red-400" />
                     </div>
-                    <span className="text-gray-300 text-sm">Limited career tools</span>
+                    <span className="text-gray-300 text-sm">Limited career games</span>
                   </div>
                   <div className="flex items-start space-x-3 group/item hover:bg-red-500/5 rounded-lg p-2 transition-colors">
                     <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
@@ -936,7 +936,7 @@ function HomePageContent() {
                     <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0 shadow-sm">
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     </div>
-                    <span className="text-white text-sm font-medium">Comprehensive career tools</span>
+                    <span className="text-white text-sm font-medium">Comprehensive career games</span>
                   </div>
                   <div className="flex items-start space-x-3 group/item hover:bg-green-500/5 rounded-lg p-2 transition-colors">
                     <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0 shadow-sm">
@@ -954,7 +954,7 @@ function HomePageContent() {
               </Card>
             </motion.div>
 
-            {/* Other Career Tools */}
+            {/* Other Career Games */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -968,7 +968,7 @@ function HomePageContent() {
                     <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
                       <X className="w-4 h-4 text-red-400" />
                     </div>
-                    Other Career Tools
+                    Other Career Games
                   </CardTitle>
                   <div className="w-12 h-px bg-gradient-to-r from-transparent via-red-400/30 to-transparent mx-auto"></div>
                 </CardHeader>

@@ -42,7 +42,7 @@ const typingText = [
 
 const demoTabs = [
   { id: 'resume', label: 'Resume Builder', icon: FileText },
-  { id: 'tools', label: 'Career Tools', icon: Wrench },
+  { id: 'tools', label: 'Career Games', icon: Wrench },
   { id: 'jobs', label: 'Jobs', icon: Briefcase },
   { id: 'talent', label: 'Talent Search', icon: Search },
   { id: 'leaderboards', label: 'Leaderboards', icon: Trophy }
@@ -184,7 +184,7 @@ export default function Hero() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-semibold text-white">Career Tools</span>
+                <span className="text-sm font-semibold text-white">Career Games</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -562,7 +562,7 @@ export default function Hero() {
               transition={{ delay: 0.6 }}
               className="text-lg md:text-xl text-gray-300 leading-relaxed max-w-2xl"
             >
-              AI-powered <span className="text-cyan-400 font-semibold">resume builder</span>, <span className="text-purple-400 font-semibold">career tools</span>, and <span className="text-green-400 font-semibold">job matching</span> designed specifically for Filipino BPO professionals. Land your dream job with confidence.
+              AI-powered <span className="text-cyan-400 font-semibold">resume builder</span>, <span className="text-purple-400 font-semibold">career games</span>, and <span className="text-green-400 font-semibold">job matching</span> designed specifically for Filipino BPO professionals. Land your dream job with confidence.
             </motion.p>
 
 

@@ -11,7 +11,8 @@ import {
   Users,
   Edit3,
   ChevronDown,
-  Building2
+  Building2,
+  Trash2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -103,6 +104,8 @@ export default function PostJobPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeletingJob, setIsDeletingJob] = useState(false);
 
   const [createJobForm, setCreateJobForm] = useState<CreateJobForm>({
     job_title: '',
@@ -668,6 +671,54 @@ export default function PostJobPage() {
       setApplicants([]);
     } finally {
       setLoadingApplicants(false);
+    }
+  };
+
+  const handleDeleteJob = async () => {
+    if (!selectedJob) return;
+    
+    setIsDeletingJob(true);
+    
+    try {
+      // Extract the original UUID from the combined job ID
+      const originalJobId = selectedJob.originalId || selectedJob.id.split('_').slice(1, -1).join('_');
+      
+      console.log('🗑️ Deleting job with ID:', originalJobId);
+      
+      const response = await fetch(`/api/recruiter/jobs/${originalJobId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || ''
+        }
+      });
+      
+      if (response.ok) {
+        // Remove the job from the local state
+        setJobs(prevJobs => prevJobs.filter(job => job.id !== selectedJob.id));
+        
+        // Close the modal and show success message
+        setShowJobDetailModal(false);
+        setShowDeleteDialog(false);
+        setSelectedJob(null);
+        
+        setSuccessMessage('Job has been successfully deleted.');
+        setShowSuccessDialog(true);
+        
+        console.log('✅ Job deleted successfully');
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to delete job:', response.status, errorData);
+        
+        setSuccessMessage('Failed to delete job. Please try again.');
+        setShowSuccessDialog(true);
+      }
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      setSuccessMessage('An error occurred while deleting the job. Please try again.');
+      setShowSuccessDialog(true);
+    } finally {
+      setIsDeletingJob(false);
     }
   };
 
@@ -1812,6 +1863,14 @@ export default function PostJobPage() {
                     >
                       View Applicants
                                    </Button>
+                                   <Button
+                                     variant="outline"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-red-600 border-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Job
+                                   </Button>
                   </>
                 )}
                                    <Button 
@@ -2143,6 +2202,38 @@ export default function PostJobPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </div>
+              Delete Job
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedJob?.title}"? This action cannot be undone and will permanently remove the job from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeletingJob}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteJob}
+              disabled={isDeletingJob}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeletingJob ? 'Deleting...' : 'Delete Job'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

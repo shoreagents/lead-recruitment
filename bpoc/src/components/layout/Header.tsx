@@ -722,7 +722,7 @@ export default function Header({}: HeaderProps) {
                   )
                 }
                 
-                // Default: Non-clickable dropdown (like Career Tools)
+                // Default: Non-clickable dropdown (like Career Games)
                 return (
                   <div key={item.title} className="relative group">
                     <div
@@ -996,7 +996,7 @@ export default function Header({}: HeaderProps) {
                              )
                            }
                            
-                           // Default: Non-clickable dropdown (like Career Tools)
+                           // Default: Non-clickable dropdown (like Career Games)
                            return (
                              <div key={item.title}>
                                <div

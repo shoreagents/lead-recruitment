@@ -345,3 +345,111 @@ export async function PUT(
     }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  console.log('🔍 API called: DELETE /api/recruiter/jobs/[id]');
+  
+  try {
+    const { id: jobId } = await params;
+
+    console.log('🔍 Request params:', { jobId });
+
+    if (!jobId) {
+      console.log('❌ No job ID provided');
+      return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
+    }
+
+    // Extract user ID from Authorization header
+    const authHeader = request.headers.get('Authorization');
+    let recruiterId: string | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) {
+          console.log('❌ Invalid token:', error?.message);
+          return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        }
+        recruiterId = user.id;
+        console.log('🔍 Extracted user ID from token:', recruiterId);
+      } catch (tokenError) {
+        console.log('❌ Token validation error:', tokenError);
+        return NextResponse.json({ error: 'Token validation failed' }, { status: 401 });
+      }
+    } else {
+      // Fallback to x-user-id header for backward compatibility
+      recruiterId = request.headers.get('x-user-id');
+      console.log('🔍 Using x-user-id header:', recruiterId);
+    }
+
+    if (!recruiterId) {
+      console.log('❌ No recruiter ID found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('🔍 Verifying recruiter ownership of job...');
+    
+    // First, verify that the recruiter owns this job
+    const existingJob = await (prisma as any).recruiterJob.findFirst({
+      where: {
+        id: jobId,
+        recruiter_id: recruiterId
+      },
+      select: {
+        id: true,
+        job_title: true
+      }
+    });
+
+    console.log('🔍 Ownership check result:', existingJob ? 'Found' : 'Not found');
+
+    if (!existingJob) {
+      console.log('❌ Job not found or access denied');
+      return NextResponse.json({ 
+        error: 'Job not found or access denied' 
+      }, { status: 404 });
+    }
+
+    console.log('🔍 Found job:', existingJob.job_title);
+
+    // Delete the job
+    console.log('🔍 Deleting job...');
+    await (prisma as any).recruiterJob.delete({
+      where: {
+        id: jobId
+      }
+    });
+
+    console.log('✅ Successfully deleted job:', existingJob.job_title);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Job deleted successfully',
+      data: {
+        id: jobId,
+        deletedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error deleting job:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    
+    console.error('❌ Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      name: errorName
+    });
+    
+    return NextResponse.json({ 
+      error: 'Failed to delete job',
+      details: errorMessage
+    }, { status: 500 });
+  }
+}

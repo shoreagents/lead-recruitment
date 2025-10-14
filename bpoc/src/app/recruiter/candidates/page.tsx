@@ -58,7 +58,7 @@ export default function CandidatesPage() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0,
-    profileComplete: 0
+    hired: 0
   });
   
   // Applications modal state
@@ -143,7 +143,7 @@ export default function CandidatesPage() {
       setCandidates(data.candidates || []);
       setStats({
         total: data.candidates?.length || 0,
-        profileComplete: data.candidates?.filter((c: any) => c.bio && c.position && c.location !== 'Not specified').length || 0
+        hired: data.candidates?.reduce((sum: number, c: any) => sum + (c.hiredCount || 0), 0) || 0
       });
       
     } catch (err) {
@@ -324,11 +324,11 @@ export default function CandidatesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-emerald-600 mb-1">Profile Complete</p>
+                  <p className="text-sm font-medium text-emerald-600 mb-1">Hired</p>
                   <div className="text-3xl font-bold text-emerald-900">
-                    {stats.profileComplete}
+                    {stats.hired}
                   </div>
-                  <p className="text-sm text-emerald-700 mt-2">Ready for interviews</p>
+                  <p className="text-sm text-emerald-700 mt-2">Successfully hired</p>
                 </div>
                 <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Star className="h-6 w-6 text-white" />

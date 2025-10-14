@@ -1491,7 +1491,7 @@ export default function ProfilePage() {
                                     <span className="text-blue-400 font-semibold text-sm">Enhanced Visibility</span>
                                   </div>
                                   <p className="text-gray-300 text-xs">
-                                    Verified profiles appear higher in search results and recommendations
+                                    Verified profiles appear higher in talent search and leaderboards
                                   </p>
                                 </div>
                               </div>

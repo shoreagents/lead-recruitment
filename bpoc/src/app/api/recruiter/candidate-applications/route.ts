@@ -51,9 +51,9 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Database connected successfully');
     
     try {
-      console.log('🔍 Fetching applications for user:', userId, 'by recruiter:', recruiterId);
+      console.log('🔍 Fetching recruiter applications for user:', userId, 'by recruiter:', recruiterId);
       
-      // Check both recruiter_applications and applications tables
+      // Only check recruiter_applications table
       console.log('🔍 Checking recruiter_applications table...');
       const recruiterQuery = `
         SELECT 
@@ -70,39 +70,20 @@ export async function GET(request: NextRequest) {
         ORDER BY ra.created_at DESC
       `;
 
-      console.log('🔍 Checking applications table...');
-      const generalQuery = `
-        SELECT 
-          a.id,
-          a.user_id,
-          a.resume_id,
-          a.resume_slug,
-          a.status,
-          a.created_at,
-          a.job_id,
-          'general' as source
-        FROM applications a
-        WHERE a.user_id = $1
-        ORDER BY a.created_at DESC
-      `;
-
-      console.log('🔍 Executing queries for userId:', userId);
+      console.log('🔍 Executing query for userId:', userId);
       
-      let recruiterResult, generalResult;
+      let recruiterResult;
       try {
         recruiterResult = await client.query(recruiterQuery, [userId]);
         console.log('🔍 Found recruiter applications:', recruiterResult.rows.length);
-        
-        generalResult = await client.query(generalQuery, [userId]);
-        console.log('🔍 Found general applications:', generalResult.rows.length);
       } catch (dbError) {
         console.error('❌ Database query error:', dbError);
         throw new Error(`Database query failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
       }
 
-      // Combine results
-      const allApplications = [...recruiterResult.rows, ...generalResult.rows];
-      console.log('🔍 Total applications found:', allApplications.length);
+      // Use only recruiter applications
+      const allApplications = recruiterResult.rows;
+      console.log('🔍 Total recruiter applications found:', allApplications.length);
 
       // If no applications found, return empty array
       if (allApplications.length === 0) {
@@ -114,7 +95,7 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Get job details for each application
+      // Get job details for each application (only recruiter jobs)
       const applications = [];
       
       for (const row of allApplications) {
@@ -122,26 +103,14 @@ export async function GET(request: NextRequest) {
         let companyName = 'Unknown Company';
         
         try {
-          if (row.source === 'recruiter') {
-            // Get job details from recruiter_jobs table
-            const jobQuery = 'SELECT job_title, company_id FROM recruiter_jobs WHERE id = $1';
-            const jobResult = await client.query(jobQuery, [row.job_id]);
-            
-            if (jobResult.rows.length > 0) {
-              const job = jobResult.rows[0];
-              jobTitle = job.job_title || `Job ${row.job_id}`;
-              companyName = job.company_id || 'Unknown Company';
-            }
-          } else if (row.source === 'general') {
-            // Get job details from processed_job_requests table
-            const jobQuery = 'SELECT job_title, company_name FROM processed_job_requests WHERE id = $1';
-            const jobResult = await client.query(jobQuery, [row.job_id]);
-            
-            if (jobResult.rows.length > 0) {
-              const job = jobResult.rows[0];
-              jobTitle = job.job_title || `Job ${row.job_id}`;
-              companyName = job.company_name || 'Unknown Company';
-            }
+          // Get job details from recruiter_jobs table
+          const jobQuery = 'SELECT job_title, company_id FROM recruiter_jobs WHERE id = $1';
+          const jobResult = await client.query(jobQuery, [row.job_id]);
+          
+          if (jobResult.rows.length > 0) {
+            const job = jobResult.rows[0];
+            jobTitle = job.job_title || `Job ${row.job_id}`;
+            companyName = job.company_id || 'Unknown Company';
           }
         } catch (jobError) {
           console.error('❌ Error fetching job details:', jobError);
@@ -157,7 +126,6 @@ export async function GET(request: NextRequest) {
           appliedAt: row.created_at,
           jobTitle,
           companyName,
-          source: row.source,
           jobId: row.job_id
         });
       }
