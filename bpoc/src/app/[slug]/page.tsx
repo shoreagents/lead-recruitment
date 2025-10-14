@@ -3545,40 +3545,20 @@ export default function ProfilePage() {
                                           // Clean up the content and split into individual traits
                                           const cleanTraits = traitsSection
                                             .replace(/^[^:]*:\s*/, '') // Remove everything before the first colon
-                                            .replace(/[•\-\*]/g, '') // Remove bullet point markers
                                             .trim();
                                           
-                                          // Split by common separators and clean up each trait
+                                          // Split by bullet points or dashes to get individual traits with their evidence
                                           let traits = cleanTraits
-                                            .split(/[,;]\s*/)
+                                            .split(/^[-•]\s*/m) // Split by bullet points at start of line
                                             .map((trait: string) => trait.trim())
                                             .filter((trait: string) => trait.length > 0);
                                           
-                                          // If no separators found, try to split by common patterns
+                                          // If no bullet points found, try to split by line breaks
                                           if (traits.length === 1) {
-                                            // Look for patterns like "Methodical problem-solver Quality-focused perfectionist"
-                                            const words = cleanTraits.split(/\s+/);
-                                            const traitPatterns = [];
-                                            let currentTrait = '';
-                                            
-                                            for (let i = 0; i < words.length; i++) {
-                                              const word = words[i];
-                                              // Check if this word starts a new trait (capitalized or hyphenated)
-                                              if (word.match(/^[A-Z]/) && currentTrait && currentTrait.length > 0) {
-                                                traitPatterns.push(currentTrait.trim());
-                                                currentTrait = word;
-                                              } else {
-                                                currentTrait += (currentTrait ? ' ' : '') + word;
-                                              }
-                                            }
-                                            
-                                            if (currentTrait) {
-                                              traitPatterns.push(currentTrait.trim());
-                                            }
-                                            
-                                            if (traitPatterns.length > 1) {
-                                              traits = traitPatterns;
-                                            }
+                                            traits = cleanTraits
+                                              .split(/\n/)
+                                              .map((trait: string) => trait.trim())
+                                              .filter((trait: string) => trait.length > 0);
                                           }
                                           
                                           // Add hyphens to compound words
@@ -3620,18 +3600,22 @@ export default function ProfilePage() {
                                           });
                                           
                                           return (
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                               {traits.map((trait: string, index: number) => (
-                                                <div key={index} className="flex items-start gap-2">
-                                                  <span className="text-green-400 mt-1">-</span>
+                                                <div key={index} className="flex items-start gap-3">
+                                                  <span className="text-green-400 mt-1 flex-shrink-0">-</span>
                                                   <span 
-                                                    className="text-gray-300"
+                                                    className="text-gray-300 leading-relaxed"
                                                     dangerouslySetInnerHTML={{
                                                       __html: trait
                                                         .replace(/\b(leadership|communication|analytical|creative|organized|strategic|empathetic|decisive|collaborative|detail-oriented|methodical|quality-focused|perfectionist|emerging|quiet|leader|process-oriented|thinker|problem-solver)\b/gi, 
                                                           '<span class="text-green-400 font-semibold">$1</span>')
                                                         .replace(/\b(strong|natural|key|primary|essential|core|fundamental)\b/gi, 
                                                           '<span class="text-yellow-400 font-medium">$1</span>')
+                                                        .replace(/\b(evidenced by|shown in|demonstrated through|reflected in)\b/gi, 
+                                                          '<span class="text-blue-400 font-medium">$1</span>')
+                                                        .replace(/\b(Dominance|Influence|Steadiness|Conscientiousness|DISC)\b/gi, 
+                                                          '<span class="text-purple-400 font-medium">$1</span>')
                                                     }}
                                                   />
                                                 </div>
@@ -3694,10 +3678,10 @@ export default function ProfilePage() {
                                       return (
                                         <div className="space-y-3">
                                           {bulletPoints.map((point: string, bulletIndex: number) => (
-                                            <div key={bulletIndex} className="flex items-start gap-2">
-                                              <span className="text-purple-400 mt-1">-</span>
+                                            <div key={bulletIndex} className="flex items-start gap-3">
+                                              <span className="text-purple-400 mt-1 flex-shrink-0">-</span>
                                               <span 
-                                                className="text-gray-300"
+                                                className="text-gray-300 leading-relaxed"
                                                 dangerouslySetInnerHTML={{
                                                   __html: point
                                                     .replace(/\b(pakikisama|malasakit|bayanihan|kapwa|utang na loob|hiya|pagkamatiyaga|tiyaga)\b/gi, 
