@@ -8,6 +8,7 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/api/save-resume-to-profile') ||
       request.nextUrl.pathname.startsWith('/api/user/saved-resumes') ||
       request.nextUrl.pathname.startsWith('/api/recruiter/jobs') ||
+      request.nextUrl.pathname.startsWith('/api/recruiter/activity') ||
       request.nextUrl.pathname.startsWith('/api/admin/applicants') ||
       request.nextUrl.pathname.startsWith('/api/user/applications') ||
       request.nextUrl.pathname.startsWith('/api/analyze-resume') ||
@@ -126,6 +127,7 @@ export const config = {
     '/api/user/saved-resumes',
     '/api/recruiter/jobs',
     '/api/recruiter/jobs/:path*',
+    '/api/recruiter/activity',
     '/api/admin/applicants',
     '/api/user/applications',
     '/api/analyze-resume',

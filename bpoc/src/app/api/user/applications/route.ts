@@ -105,6 +105,14 @@ export async function POST(request: NextRequest) {
          RETURNING *`,
         [userId, uuidJobId, resumeId, resumeSlug]
       )
+
+      // Update the applicants count in recruiter_jobs
+      await client.query(
+        `UPDATE recruiter_jobs 
+         SET applicants = applicants + 1, updated_at = now()
+         WHERE id = $1`,
+        [uuidJobId]
+      )
     }
 
     await client.query('COMMIT')

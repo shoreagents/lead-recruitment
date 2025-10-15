@@ -63,10 +63,9 @@ export default function RecruiterProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<RecruiterProfile | null>(null);
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingAdditional, setIsEditingAdditional] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [activitiesLoading, setActivitiesLoading] = useState(false);
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const [editForm, setEditForm] = useState({
     full_name: '',
     username: '',
@@ -90,39 +89,6 @@ export default function RecruiterProfilePage() {
     }
   }, [isEditingPersonal, profile]);
 
-  // Fetch activities data
-  const fetchActivities = async () => {
-    if (!user?.id) return;
-    
-    try {
-      setActivitiesLoading(true);
-      console.log('🔍 Fetching activities for user:', user.id);
-      
-      const response = await fetch('/api/recruiter/activity', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Activities fetched:', data.activities?.length || 0);
-        console.log('🔍 Activities data:', data.activities);
-        setActivities(data.activities || []);
-        setLastRefreshTime(new Date());
-      } else {
-        console.error('❌ Failed to fetch activities:', response.status);
-        setActivities([]);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching activities:', error);
-      setActivities([]);
-    } finally {
-      setActivitiesLoading(false);
-    }
-  };
 
   // Fetch user profile data
   useEffect(() => {
@@ -293,61 +259,6 @@ export default function RecruiterProfilePage() {
     fetchUserProfile();
   }, [user]);
 
-  // Fetch activities when component mounts
-  useEffect(() => {
-    fetchActivities();
-  }, [user]);
-
-  // Refresh activities every 10 seconds to catch status changes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchActivities();
-    }, 10000); // 10 seconds
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  // Also refresh when the tab becomes visible (user switches back to profile)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchActivities();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user]);
-
-  // Helper function to format time ago
-  const getTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const activityTime = new Date(timestamp);
-    const diffInMinutes = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    
-    const diffInWeeks = Math.floor(diffInDays / 7);
-    return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
-  };
-
-  // Helper function to get icon component
-  const getActivityIcon = (icon: string) => {
-    switch (icon) {
-      case 'briefcase': return Briefcase;
-      case 'check-circle': return CheckCircle;
-      case 'user-plus': return UserPlus;
-      case 'edit': return Edit3;
-      default: return Users;
-    }
-  };
 
 
   const handleEditPersonal = () => {
@@ -386,25 +297,23 @@ export default function RecruiterProfilePage() {
       
       // Update profile in database
       const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: user.id,
-          updates: {
-            full_name: editForm.full_name,
-            username: editForm.username,
-            phone: editForm.phone,
-            location: editForm.location,
-            company: editForm.company,
-            position: editForm.position,
-            bio: editForm.bio,
-            linkedin_url: editForm.linkedin_url,
-            website: editForm.website,
-            company_email: editForm.company_email,
-            working_hours: editForm.working_hours
-          }
+          full_name: editForm.full_name,
+          username: editForm.username,
+          phone: editForm.phone,
+          location: editForm.location,
+          company: editForm.company,
+          position: editForm.position,
+          bio: editForm.bio,
+          linkedin_url: editForm.linkedin_url,
+          website: editForm.website,
+          company_email: editForm.company_email,
+          working_hours: editForm.working_hours
         })
       });
 
@@ -436,19 +345,17 @@ export default function RecruiterProfilePage() {
       
       // Update profile in database
       const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: user.id,
-          updates: {
-            full_name: editForm.full_name,
-            username: editForm.username,
-            location: editForm.location,
-            position: editForm.position,
-            bio: editForm.bio
-          }
+          full_name: editForm.full_name,
+          username: editForm.username,
+          location: editForm.location,
+          position: editForm.position,
+          bio: editForm.bio
         })
       });
 
@@ -483,18 +390,16 @@ export default function RecruiterProfilePage() {
       
       // Update profile in database
       const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: user.id,
-          updates: {
-            linkedin_url: editForm.linkedin_url,
-            website: editForm.website,
-            company_email: editForm.company_email,
-            working_hours: editForm.working_hours
-          }
+          linkedin_url: editForm.linkedin_url,
+          website: editForm.website,
+          company_email: editForm.company_email,
+          working_hours: editForm.working_hours
         })
       });
 
@@ -646,18 +551,12 @@ export default function RecruiterProfilePage() {
             {/* Tabs */}
             <Tabs defaultValue="overview" className="w-full">
               <div className="px-8 pt-8">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 border-2 border-gray-200 rounded-xl p-1 h-12">
+                <TabsList className="grid w-full grid-cols-1 bg-gray-100 border-2 border-gray-200 rounded-xl p-1 h-12">
                   <TabsTrigger 
                     value="overview" 
                     className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold transition-all duration-200"
                   >
                     Overview
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="activity" 
-                    className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg font-semibold transition-all duration-200"
-                  >
-                    Activity
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -865,109 +764,6 @@ export default function RecruiterProfilePage() {
                   )}
                 </div>
 
-              </TabsContent>
-
-              <TabsContent value="activity" className="p-8">
-                <div className="mb-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Users className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
-                        <p className="text-gray-600 mt-1">
-                          Your recent recruitment activities and milestones
-                          {lastRefreshTime && (
-                            <span className="text-xs text-gray-500 ml-2">
-                              (Last updated: {lastRefreshTime.toLocaleTimeString()})
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={fetchActivities}
-                      disabled={activitiesLoading}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${activitiesLoading ? 'animate-spin' : ''}`} />
-                      <span>Refresh</span>
-                    </Button>
-                  </div>
-                </div>
-                
-                {activitiesLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-gray-600">Loading activities...</span>
-                  </div>
-                ) : activities.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Users className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No activities yet</h3>
-                    <p className="text-gray-600">Your recruitment activities will appear here once you start posting jobs and receiving applications.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                    {activities.map((activity, index) => {
-                      const IconComponent = getActivityIcon(activity.icon);
-                      const timeAgo = getTimeAgo(activity.timestamp);
-                      
-                      const getColorClasses = (color: string) => {
-                        switch (color) {
-                          case 'green':
-                            return 'from-green-50 to-emerald-50 border-green-200 bg-green-500';
-                          case 'blue':
-                            return 'from-blue-50 to-cyan-50 border-blue-200 bg-blue-500';
-                          case 'purple':
-                            return 'from-purple-50 to-pink-50 border-purple-200 bg-purple-500';
-                          case 'orange':
-                            return 'from-orange-50 to-yellow-50 border-orange-200 bg-orange-500';
-                          default:
-                            return 'from-gray-50 to-slate-50 border-gray-200 bg-gray-500';
-                        }
-                      };
-
-                      const getBadgeClasses = (status: string) => {
-                        switch (status) {
-                          case 'completed':
-                            return 'bg-green-100 text-green-800 border-green-200';
-                          case 'active':
-                            return 'bg-blue-100 text-blue-800 border-blue-200';
-                          case 'pending':
-                            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                          case 'updated':
-                            return 'bg-orange-100 text-orange-800 border-orange-200';
-                          default:
-                            return 'bg-gray-100 text-gray-800 border-gray-200';
-                        }
-                      };
-
-                      const colorClasses = getColorClasses(activity.color);
-                      const badgeClasses = getBadgeClasses(activity.status);
-
-                      return (
-                        <div key={activity.id || index} className={`flex items-center space-x-6 p-6 bg-gradient-to-r ${colorClasses} rounded-xl border shadow-sm hover:shadow-md transition-shadow`}>
-                          <div className={`w-12 h-12 ${activity.color === 'green' ? 'bg-green-500' : activity.color === 'blue' ? 'bg-blue-500' : activity.color === 'purple' ? 'bg-purple-500' : activity.color === 'orange' ? 'bg-orange-500' : 'bg-gray-500'} rounded-full flex items-center justify-center shadow-lg`}>
-                            <IconComponent className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-900 text-lg">{activity.title}</p>
-                            <p className="text-gray-600 mt-1">{timeAgo}</p>
-                          </div>
-                          <div className="text-right">
-                            <Badge className={badgeClasses}>{activity.status}</Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </TabsContent>
 
             </Tabs>
