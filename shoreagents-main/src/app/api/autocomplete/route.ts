@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY is not set')
       return NextResponse.json({ 
-        suggestions: [],
-        error: 'API key not configured'
+        error: 'AI autocomplete requires ANTHROPIC_API_KEY to be configured'
       }, { status: 500 })
     }
 
@@ -125,8 +124,8 @@ Only return the JSON array, no other text.`;
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: type === 'description' ? 500 : 300,
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: type === 'description' ? 1000 : 500,
       temperature: 0.3,
       messages: [
         {
@@ -154,19 +153,38 @@ Only return the JSON array, no other text.`;
       // For suggestions, parse the JSON response
       let suggestions
       try {
+        console.log('🤖 Raw AI response:', content.text);
         suggestions = JSON.parse(content.text)
         console.log('✅ Parsed AI suggestions:', suggestions);
       } catch (parseError) {
-        console.error('❌ Failed to parse suggestions:', parseError)
-        // Fallback suggestions based on type
-        suggestions = getFallbackSuggestions(query, type, industry)
-        console.log('🔄 Using fallback suggestions:', suggestions);
+        console.error('❌ Failed to parse AI suggestions:', parseError)
+        console.error('❌ Raw response that failed to parse:', content.text);
+        
+        // Try to extract JSON from the response if it's wrapped in text
+        try {
+          const jsonMatch = content.text.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            suggestions = JSON.parse(jsonMatch[0]);
+            console.log('✅ Extracted JSON from wrapped response:', suggestions);
+          } else {
+            throw new Error('No JSON found in response');
+          }
+        } catch (extractError) {
+          console.error('❌ Failed to extract JSON from response:', extractError);
+          return NextResponse.json({ 
+            error: 'Failed to parse AI response',
+            details: extractError instanceof Error ? extractError.message : 'Unknown parsing error'
+          }, { status: 500 })
+        }
       }
 
       // Ensure we always return an array
       if (!Array.isArray(suggestions)) {
-        console.log('⚠️ Suggestions not an array, using fallback');
-        suggestions = getFallbackSuggestions(query, type, industry);
+        console.log('⚠️ Suggestions not an array');
+        return NextResponse.json({ 
+          error: 'AI returned invalid response format',
+          details: 'Expected array but got: ' + typeof suggestions 
+        }, { status: 500 })
       }
 
       console.log('📤 Returning suggestions:', suggestions);
@@ -176,87 +194,9 @@ Only return the JSON array, no other text.`;
   } catch (error) {
     console.error('❌ Autocomplete API error:', error)
     
-    // Fallback suggestions for common inputs
-    const fallbackSuggestions = getFallbackSuggestions(query, type, industry)
-    console.log('🔄 Using fallback suggestions in catch:', fallbackSuggestions);
-    
-    if (type === 'description') {
-      const fallbackDescription = `We are looking for a ${roleTitle || 'professional'} to join our team. This role involves various responsibilities and requires relevant experience in the field.`;
-      console.log('📝 Returning fallback description:', fallbackDescription);
-      return NextResponse.json(fallbackDescription)
-    } else {
-      console.log('📤 Returning fallback suggestions:', fallbackSuggestions);
-      return NextResponse.json(fallbackSuggestions)
-    }
+    return NextResponse.json({ 
+      error: 'AI autocomplete failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
-}
-
-function getFallbackSuggestions(query: string, type: string = 'role', industry?: string): Array<{title: string, description: string, level: string}> {
-  const lowerQuery = query.toLowerCase()
-  
-  if (type === 'industry') {
-    return [
-      { title: "Technology", description: "Software development, IT services, and technology solutions", level: "Industry" },
-      { title: "Healthcare", description: "Healthcare services, medical practices, and wellness", level: "Industry" },
-      { title: "Finance", description: "Banking, accounting, and financial advisory services", level: "Industry" },
-      { title: "Real Estate", description: "Property management, real estate services, and construction", level: "Industry" },
-      { title: "Marketing", description: "Digital marketing, advertising, and brand management", level: "Industry" }
-    ]
-  }
-  
-  if (type === 'role') {
-    if (lowerQuery.includes('dev') || lowerQuery.includes('software') || lowerQuery.includes('program')) {
-      return [
-        { title: "Software Developer", description: "Develops software applications and systems", level: "mid" },
-        { title: "Frontend Developer", description: "Creates user interfaces and client-side applications", level: "mid" },
-        { title: "Backend Developer", description: "Develops server-side applications and APIs", level: "mid" }
-      ]
-    }
-    
-    if (lowerQuery.includes('market') || lowerQuery.includes('social') || lowerQuery.includes('content')) {
-      return [
-        { title: "Marketing Manager", description: "Develops and executes marketing strategies", level: "senior" },
-        { title: "Content Writer", description: "Creates engaging content for various platforms", level: "mid" },
-        { title: "Social Media Specialist", description: "Manages social media presence and campaigns", level: "mid" }
-      ]
-    }
-    
-    if (lowerQuery.includes('customer') || lowerQuery.includes('service') || lowerQuery.includes('support')) {
-      return [
-        { title: "Customer Service Representative", description: "Provides customer support and assistance", level: "entry" },
-        { title: "Support Specialist", description: "Handles technical support and troubleshooting", level: "mid" },
-        { title: "Client Success Manager", description: "Ensures client satisfaction and retention", level: "senior" }
-      ]
-    }
-    
-    if (lowerQuery.includes('admin') || lowerQuery.includes('assistant') || lowerQuery.includes('virtual')) {
-      return [
-        { title: "Virtual Assistant", description: "Provides administrative and support services", level: "entry" },
-        { title: "Administrative Assistant", description: "Handles administrative tasks and coordination", level: "entry" },
-        { title: "Executive Assistant", description: "Supports senior executives with various tasks", level: "mid" }
-      ]
-    }
-    
-    if (lowerQuery.includes('account') || lowerQuery.includes('finance') || lowerQuery.includes('book')) {
-      return [
-        { title: "Accountant", description: "Manages financial records and reporting", level: "mid" },
-        { title: "Bookkeeper", description: "Maintains financial records and transactions", level: "entry" },
-        { title: "Financial Analyst", description: "Analyzes financial data and market trends", level: "mid" }
-      ]
-    }
-    
-    // Default role suggestions
-    return [
-      { title: "Software Developer", description: "Develops software applications and systems", level: "mid" },
-      { title: "Marketing Manager", description: "Develops and executes marketing strategies", level: "senior" },
-      { title: "Customer Service Representative", description: "Provides customer support and assistance", level: "entry" }
-    ]
-  }
-  
-  // Default fallback
-  return [
-    { title: "Software Developer", description: "Develops software applications and systems", level: "mid" },
-    { title: "Marketing Manager", description: "Develops and executes marketing strategies", level: "senior" },
-    { title: "Customer Service Representative", description: "Provides customer support and assistance", level: "entry" }
-  ]
 }

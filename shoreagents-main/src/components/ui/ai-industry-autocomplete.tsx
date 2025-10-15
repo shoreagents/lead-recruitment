@@ -31,17 +31,6 @@ export function AIIndustryAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   
-  // Common industries for instant suggestions
-  const commonIndustries: AISuggestion[] = [
-    { title: 'Technology', description: 'Software development, IT services, and technology solutions', level: 'Industry' },
-    { title: 'Real Estate', description: 'Property management, real estate services, and construction', level: 'Industry' },
-    { title: 'Healthcare', description: 'Healthcare services, medical practices, and wellness', level: 'Industry' },
-    { title: 'Finance', description: 'Banking, accounting, and financial advisory services', level: 'Industry' },
-    { title: 'Marketing', description: 'Digital marketing, advertising, and brand management', level: 'Industry' },
-    { title: 'E-commerce', description: 'Online stores, marketplaces, and digital commerce', level: 'Industry' },
-    { title: 'Education', description: 'Educational institutions, training, and e-learning', level: 'Industry' },
-    { title: 'Legal', description: 'Law firms, legal consulting, and compliance services', level: 'Industry' }
-  ];
 
   const userId = generateUserId();
   
@@ -61,14 +50,10 @@ export function AIIndustryAutocomplete({
     'industry'
   );
 
-  // Combine common industries and AI suggestions
+  // Use only AI suggestions - no hardcoded fallbacks
   const suggestions = searchQuery.length >= 2 && aiSuggestions && Array.isArray(aiSuggestions) && debouncedQuery === searchQuery
     ? aiSuggestions 
-    : searchQuery.length >= 2 
-      ? commonIndustries.filter(industry =>
-          industry.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : commonIndustries;
+    : [];
   
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);

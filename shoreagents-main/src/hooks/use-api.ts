@@ -123,7 +123,7 @@ const fetchAutocompleteSuggestions = async (data: AutocompleteData): Promise<AIS
     body: JSON.stringify({
       query: data.query,
       user_id: data.user_id,
-      type: data.type || 'role', // Default to 'role' type
+      type: data.type, // Use the exact type passed
       industry: data.industry,
       roleTitle: data.roleTitle,
       generateAnother: data.generateAnother,

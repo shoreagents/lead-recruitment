@@ -115,18 +115,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [conversationsData]);
 
-  // Initialize with welcome message if no messages exist
-  useEffect(() => {
-    if (messages.length === 0) {
-      const welcomeMessage: Message = {
-        id: 'welcome',
-        role: 'assistant',
-        content: getRandomWelcomeMessage(),
-        timestamp: new Date(),
-      };
-      setMessages([welcomeMessage]);
-    }
-  }, []);
+  // Don't automatically set a welcome message - let the first user interaction trigger personalized greeting
+  // This allows the API to generate personalized greetings based on user data
 
   // Save conversations to localStorage when they change
   useEffect(() => {

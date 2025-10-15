@@ -26,6 +26,7 @@ interface MayaTextFieldProps {
   isOptional?: boolean
   enableAutocomplete?: boolean
   autocompleteContext?: string
+  autocompleteType?: 'industry' | 'role' | 'description'
 }
 
 export const MayaTextField = ({
@@ -42,7 +43,8 @@ export const MayaTextField = ({
   nextQuestion,
   isOptional = false,
   enableAutocomplete = false,
-  autocompleteContext = ''
+  autocompleteContext = '',
+  autocompleteType = 'role'
 }: MayaTextFieldProps) => {
   const [value, setValue] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,8 +56,17 @@ export const MayaTextField = ({
   const { suggestions, isLoading: isAutocompleteLoading, fetchSuggestions, clearSuggestions } = useAIAutocomplete({
     debounceMs: 300,
     minLength: 2,
-    maxSuggestions: 3
+    maxSuggestions: 3,
+    defaultType: autocompleteType
   })
+  
+  // Reset value when step changes (for individual role collection)
+  useEffect(() => {
+    setValue('')
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+    clearSuggestions()
+  }, [step, clearSuggestions])
 
   const handleSubmit = async () => {
     if (!validation(value) && !isOptional) return
@@ -158,14 +169,9 @@ export const MayaTextField = ({
       className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-lime-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            M
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-600">{description}</p>
-          </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-600">{description}</p>
         </div>
         <div className="relative">
           <div className="flex gap-2">
