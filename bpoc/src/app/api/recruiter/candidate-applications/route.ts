@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     try {
       console.log('🔍 Fetching recruiter applications for user:', userId, 'by recruiter:', recruiterId);
       
-      // Only check recruiter_applications table
+      // Only check recruiter_applications table for jobs belonging to this recruiter
       console.log('🔍 Checking recruiter_applications table...');
       const recruiterQuery = `
         SELECT 
@@ -66,16 +66,17 @@ export async function GET(request: NextRequest) {
           ra.job_id,
           'recruiter' as source
         FROM recruiter_applications ra
-        WHERE ra.user_id = $1
+        JOIN recruiter_jobs rj ON ra.job_id = rj.id
+        WHERE ra.user_id = $1 AND rj.recruiter_id = $2
         ORDER BY ra.created_at DESC
       `;
 
-      console.log('🔍 Executing query for userId:', userId);
+      console.log('🔍 Executing query for userId:', userId, 'and recruiterId:', recruiterId);
       
       let recruiterResult;
       try {
-        recruiterResult = await client.query(recruiterQuery, [userId]);
-        console.log('🔍 Found recruiter applications:', recruiterResult.rows.length);
+        recruiterResult = await client.query(recruiterQuery, [userId, recruiterId]);
+        console.log('🔍 Found recruiter applications for this recruiter:', recruiterResult.rows.length);
       } catch (dbError) {
         console.error('❌ Database query error:', dbError);
         throw new Error(`Database query failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`);
