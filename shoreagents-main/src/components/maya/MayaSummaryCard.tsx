@@ -97,14 +97,9 @@ export const MayaSummaryCard = ({
       className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm max-w-full"
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-lime-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            M
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Please review your information</h3>
-            <p className="text-sm text-gray-600">Make sure everything looks correct before we continue</p>
-          </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Please review your information</h3>
+          <p className="text-sm text-gray-600">Make sure everything looks correct before we continue</p>
         </div>
 
         <div className="bg-gray-50 rounded-lg p-4 space-y-3">

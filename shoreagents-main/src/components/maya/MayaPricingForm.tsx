@@ -2,6 +2,9 @@
 
 import { MayaTextField } from './MayaTextField'
 import { MayaSummaryCard } from './MayaSummaryCard'
+import { MayaPricingSummaryCard } from './MayaPricingSummaryCard'
+import { getCandidateRecommendations } from '@/lib/bpocPricingService'
+import { CandidateRecommendation } from '@/lib/bpocPricingService'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
@@ -30,6 +33,16 @@ export const MayaPricingForm = ({
   generateMessageId,
   formData
 }: MayaPricingFormProps) => {
+  const [candidateRecommendations, setCandidateRecommendations] = useState<CandidateRecommendation[]>([])
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false)
+
+  // Helper function to capitalize first letter of each word
+  const capitalizeName = (name: string): string => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
   const handleTeamSizeComplete = (value: string) => {
     onFormDataChange({ ...formData, teamSize: value })
     
@@ -38,28 +51,220 @@ export const MayaPricingForm = ({
     if (teamSize >= 2) {
       onStepChange('roleType')
     } else {
-      onStepChange('roles')
+      // For single member, go to industry first, then individual roles
+      onFormDataChange({ ...formData, teamSize: value, currentMember: 1 })
+      onStepChange('industry')
     }
   }
 
   const handleRoleTypeComplete = (value: string) => {
     onFormDataChange({ ...formData, roleType: value })
-    onStepChange('roles')
+    onStepChange('industry')
   }
 
-  const handleRolesComplete = (value: string) => {
-    onFormDataChange({ ...formData, roles: value })
-    onStepChange('experience')
+  const handleIndustryComplete = (value: string) => {
+    const teamSize = parseInt(formData.teamSize || '1')
+    const isSameRole = formData.roleType?.toLowerCase() === 'same'
+    
+    // For single member, always go to individual roles
+    if (teamSize === 1) {
+      onFormDataChange({ ...formData, industry: value, currentMember: 1 })
+      onStepChange('individualRoles')
+    } else if (isSameRole) {
+      // Same role for all members - go directly to individual roles (just one member)
+      onFormDataChange({ ...formData, industry: value, currentMember: 1 })
+      onStepChange('individualRoles')
+    } else {
+      // Different roles - start collecting individual roles
+      onFormDataChange({ ...formData, industry: value, currentMember: 1 })
+      onStepChange('individualRoles')
+    }
+  }
+
+
+  const handleIndividualRoleComplete = (value: string) => {
+    const currentMember = formData.currentMember || 1
+    const teamSize = parseInt(formData.teamSize || '1')
+    const isSameRole = formData.roleType?.toLowerCase() === 'same'
+    
+    // Store the role for the current member
+    const updatedFormData = {
+      ...formData,
+      [`member${currentMember}Role`]: value
+    }
+    
+    if (isSameRole) {
+      // Same role for all members - copy the role to all members
+      const allMembersData = { ...updatedFormData }
+      for (let i = 1; i <= teamSize; i++) {
+        allMembersData[`member${i}Role`] = value
+      }
+      onFormDataChange(allMembersData)
+      
+      // Check team size for experience setup
+      if (teamSize === 1) {
+        onStepChange('experience')
+      } else {
+        onStepChange('experienceSetup')
+      }
+    } else {
+      // Different roles - continue with individual collection
+      if (currentMember < teamSize) {
+        // Move to next member
+        onFormDataChange({ ...updatedFormData, currentMember: currentMember + 1 })
+        onStepChange('individualRoles')
+      } else {
+        // All members done, check team size for experience setup
+        onFormDataChange(updatedFormData)
+        if (teamSize === 1) {
+          onStepChange('experience')
+        } else {
+          onStepChange('experienceSetup')
+        }
+      }
+    }
   }
 
   const handleExperienceComplete = (value: string) => {
-    onFormDataChange({ ...formData, experience: value })
-    onStepChange('description')
+    const teamSize = parseInt(formData.teamSize || '1')
+    
+    // Check if we're coming from "same experience" flow
+    if (formData.experienceSetup === 'yes') {
+      // Apply the same experience level to all members
+      const updatedFormData = { ...formData, experience: value }
+      
+      // Set the experience for all members
+      for (let i = 1; i <= teamSize; i++) {
+        updatedFormData[`member${i}Experience`] = value
+      }
+      
+      onFormDataChange(updatedFormData)
+      onStepChange('description')
+    } else {
+      // Original logic for different experience levels
+      onFormDataChange({ ...formData, experience: value })
+      
+      if (teamSize === 1) {
+        // For single team member, go directly to description
+        onStepChange('description')
+      } else {
+        // For multiple team members, ask about same experience level
+        onStepChange('experienceSetup')
+      }
+    }
   }
 
   const handleDescriptionComplete = (value: string) => {
     onFormDataChange({ ...formData, description: value })
+    
+    // Check team size - if only 1 member, skip workplace setup question
+    const teamSize = parseInt(formData.teamSize || '1')
+    if (teamSize === 1) {
+      // For single team member, go directly to workplace type selection
+      onFormDataChange({ ...formData, description: value, workplaceSetup: 'yes' })
+      onStepChange('workplaceType')
+    } else {
+      // For multiple team members, ask about same setup
+      onStepChange('workplaceSetup')
+    }
+  }
+
+  const handleWorkplaceSetupComplete = (value: string) => {
+    console.log('🏢 Workplace Setup Complete:', { value, formData })
+    onFormDataChange({ ...formData, workplaceSetup: value })
+    if (value.toLowerCase() === 'yes') {
+      onStepChange('workplaceType')
+    } else {
+      // Initialize currentMember to 1 for individual setup
+      const individualData = { ...formData, workplaceSetup: value, currentMember: 1 }
+      console.log('🔄 Starting individual setup:', individualData)
+      onFormDataChange(individualData)
+      onStepChange('workplaceIndividual')
+    }
+  }
+
+  const handleWorkplaceTypeComplete = (value: string) => {
+    onFormDataChange({ ...formData, workplaceType: value })
     onStepChange('summary')
+  }
+
+  const handleWorkplaceIndividualComplete = (value: string) => {
+    const currentMember = formData.currentMember || 1
+    const teamSize = parseInt(formData.teamSize || '1')
+    
+    console.log('🏢 Workplace Individual Complete:', {
+      currentMember,
+      teamSize,
+      value,
+      formData
+    })
+    
+    const workplaceData = {
+      ...formData,
+      [`member${currentMember}Workplace`]: value
+    }
+    
+    // Update the form data with the workplace choice
+    onFormDataChange(workplaceData)
+    
+    if (currentMember < teamSize) {
+      // Move to next member
+      const nextMemberData = { ...workplaceData, currentMember: currentMember + 1 }
+      console.log('🔄 Moving to next member:', nextMemberData)
+      onFormDataChange(nextMemberData)
+      onStepChange('workplaceIndividual')
+    } else {
+      // All members done, go to summary
+      console.log('✅ All members completed, going to summary')
+      onStepChange('summary')
+    }
+  }
+
+  const handleExperienceSetupComplete = (value: string) => {
+    console.log('🎯 Experience Setup Complete:', { value, formData })
+    onFormDataChange({ ...formData, experienceSetup: value })
+    if (value.toLowerCase() === 'yes') {
+      // Go to experience selection step for same experience level
+      onStepChange('experience')
+    } else {
+      // Initialize currentMember to 1 for individual experience setup
+      const individualData = { ...formData, experienceSetup: value, currentMember: 1 }
+      console.log('🔄 Starting individual experience setup:', individualData)
+      onFormDataChange(individualData)
+      onStepChange('experienceIndividual')
+    }
+  }
+
+  const handleExperienceIndividualComplete = (value: string) => {
+    const currentMember = formData.currentMember || 1
+    const teamSize = parseInt(formData.teamSize || '1')
+    
+    console.log('🎯 Experience Individual Complete:', {
+      currentMember,
+      teamSize,
+      value,
+      formData
+    })
+    
+    const experienceData = {
+      ...formData,
+      [`member${currentMember}Experience`]: value
+    }
+    
+    // Update the form data with the experience choice
+    onFormDataChange(experienceData)
+    
+    if (currentMember < teamSize) {
+      // Move to next member
+      const nextMemberData = { ...experienceData, currentMember: currentMember + 1 }
+      console.log('🔄 Moving to next member:', nextMemberData)
+      onFormDataChange(nextMemberData)
+      onStepChange('experienceIndividual')
+    } else {
+      // All members done, go to description
+      console.log('✅ All members completed, going to description')
+      onStepChange('description')
+    }
   }
 
   const handleSummaryConfirm = async () => {
@@ -87,8 +292,8 @@ export const MayaPricingForm = ({
       const result = await response.json();
       console.log('Pricing info saved:', result);
 
-      // Move to workplace setup instead of closing
-      onStepChange('workplace')
+      // Move to candidate recommendation step
+      onStepChange('candidateRecommendation')
       
       // Add completion message
       const teamSize = parseInt(formData.teamSize || '1')
@@ -128,6 +333,69 @@ export const MayaPricingForm = ({
 
   const handleSummaryEdit = (field: string) => {
     onStepChange(field)
+  }
+
+  const fetchCandidateRecommendations = async () => {
+    setIsLoadingCandidates(true)
+    try {
+      // Get the main role and experience level from form data
+      const mainRole = formData.roles || 'Team Member'
+      const experienceLevel = formData.experience || 'mid'
+      const industry = formData.industry || undefined
+      
+      console.log('🔍 Fetching BPOC candidates for:', { mainRole, experienceLevel, industry })
+      
+      // Fetch candidate recommendations using the real BPOC service
+      const jobMatch = await getCandidateRecommendations(mainRole, experienceLevel as 'entry' | 'mid' | 'senior', industry)
+      
+      console.log('✅ BPOC candidates fetched:', jobMatch.recommendedCandidates.length)
+      setCandidateRecommendations(jobMatch.recommendedCandidates)
+      
+    } catch (error) {
+      console.error('❌ Error fetching BPOC candidates:', error)
+      // Set empty array on error
+      setCandidateRecommendations([])
+    } finally {
+      setIsLoadingCandidates(false)
+    }
+  }
+
+  const handleCandidateRecommendationComplete = (value: string) => {
+    // Add user response message to chat
+    const userMessage: Message = {
+      id: generateMessageId(),
+      role: 'user',
+      content: value === 'yes' ? 'Yes, show me recommended candidates' : 'No, I\'m good with the quote for now',
+      timestamp: new Date(),
+    }
+    setMessages(prev => [...prev, userMessage])
+    
+    if (value === 'yes') {
+      // Fetch candidates and show recommendations step
+      fetchCandidateRecommendations()
+      onStepChange('showCandidates')
+      
+      // Add Maya's response
+      const mayaMessage: Message = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: 'Perfect! Let me find some talented professionals that match your requirements. Here are my top recommendations for your team: 🎯',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, mayaMessage])
+    } else {
+      // User doesn't want recommendations, close the form
+      onStepChange(null)
+      
+      // Add Maya's response
+      const mayaMessage: Message = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: 'No problem! You have your personalized quote. Feel free to reach out anytime if you\'d like to see candidate recommendations or have any questions. Good luck with your project! 🚀',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, mayaMessage])
+    }
   }
 
   if (currentStep === 'teamSize') {
@@ -190,33 +458,51 @@ export const MayaPricingForm = ({
     )
   }
 
-  if (currentStep === 'roles') {
-    const isSameRole = formData.roleType?.toLowerCase() === 'same'
+  if (currentStep === 'industry') {
+    return (
+      <MayaTextField
+        key="industry-step"
+        step="industry"
+        title="What industry does your business operate in?"
+        description="This helps me provide more relevant talent recommendations for your specific industry needs."
+        placeholder="e.g., Technology, Healthcare, Finance, Real Estate, Marketing"
+        inputType="text"
+        onComplete={handleIndustryComplete}
+        setMessages={setMessages}
+        generateMessageId={generateMessageId}
+        nextStep="roles"
+        nextQuestion="Great! Now let's specify the roles you need."
+        enableAutocomplete={true}
+        autocompleteContext="business industries for offshore staffing"
+        autocompleteType="industry"
+      />
+    )
+  }
+
+
+  if (currentStep === 'individualRoles') {
+    const currentMember = formData.currentMember || 1
     const teamSize = parseInt(formData.teamSize || '1')
+    const isSameRole = formData.roleType?.toLowerCase() === 'same'
     
     return (
       <MayaTextField
-        key="roles-step"
-        step="roles"
-        title={isSameRole ? "What role do you need?" : "What roles do you need?"}
-        description={
-          isSameRole 
-            ? `Please specify the role for all ${teamSize} team members`
-            : "Please specify the different positions you're looking for"
-        }
-        placeholder={
-          isSameRole 
-            ? "e.g., Software Developer, Marketing Manager, Customer Service Rep"
-            : "e.g., Software Developer, Marketing Manager, Customer Service Rep"
-        }
+        key={`individual-roles-step-member-${currentMember}`}
+        step="individualRoles"
+        title={isSameRole ? "What role do you need?" : `What role does member ${currentMember} need?`}
+        description={isSameRole ? 
+          `Please specify the role for all ${teamSize} team members` : 
+          `Please specify the role for team member ${currentMember} of ${teamSize}`}
+        placeholder="e.g., Software Developer, Marketing Manager, Customer Service Rep"
         inputType="text"
-        onComplete={handleRolesComplete}
+        onComplete={handleIndividualRoleComplete}
         setMessages={setMessages}
         generateMessageId={generateMessageId}
-        nextStep="description"
-        nextQuestion="Great! Can you tell me more about the project or specific requirements?"
+        nextStep="experience"
+        nextQuestion="Great! What experience level are you looking for?"
         enableAutocomplete={true}
         autocompleteContext="job roles and positions for offshore staffing"
+        autocompleteType="role"
       />
     )
   }
@@ -268,7 +554,109 @@ export const MayaPricingForm = ({
                   size="sm"
                   className="text-xs px-3 py-2 h-auto justify-start"
                 >
-                  Mixed Levels
+                  Any Level
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'experienceSetup') {
+    return (
+      <div key="experience-setup-step" className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          {/* Maya's Message Bubble without Avatar */}
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  🎯 Experience Level Setup
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Do they have the same experience level?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleExperienceSetupComplete('yes')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Yes, same experience level for all
+                </Button>
+                <Button
+                  onClick={() => handleExperienceSetupComplete('no')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  No, different experience levels needed
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'experienceIndividual') {
+    const currentMember = formData.currentMember || 1
+    const teamSize = parseInt(formData.teamSize || '1')
+    const memberRole = formData[`member${currentMember}Role`] || 'Team Member'
+    
+    return (
+      <div key={`experience-individual-step-member-${currentMember}`} className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          {/* Maya's Message Bubble without Avatar */}
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  🎯 Experience Level - {memberRole}
+                </h3>
+                <p className="text-xs text-gray-600">
+                  What experience level does the {memberRole} need?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleExperienceIndividualComplete('entry')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Entry Level (0-2 years)
+                </Button>
+                <Button
+                  onClick={() => handleExperienceIndividualComplete('mid')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Mid Level (3-5 years)
+                </Button>
+                <Button
+                  onClick={() => handleExperienceIndividualComplete('senior')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Senior Level (6+ years)
+                </Button>
+                <Button
+                  onClick={() => handleExperienceIndividualComplete('mixed')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Any Level
                 </Button>
               </div>
             </div>
@@ -292,13 +680,285 @@ export const MayaPricingForm = ({
 
   if (currentStep === 'summary') {
     return (
-      <MayaSummaryCard
+      <MayaPricingSummaryCard
         formData={formData}
         onConfirm={handleSummaryConfirm}
         onEdit={handleSummaryEdit}
         setMessages={setMessages}
         generateMessageId={generateMessageId}
       />
+    )
+  }
+
+  if (currentStep === 'candidateRecommendation') {
+    return (
+      <div key="candidate-recommendation-step" className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  Would you like to see recommended candidates?
+                </h3>
+                <p className="text-xs text-gray-600">
+                  I can show you talented professionals that match your specific requirements
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleCandidateRecommendationComplete('yes')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Yes, show me recommended candidates
+                </Button>
+                <Button
+                  onClick={() => handleCandidateRecommendationComplete('no')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  No, I'm good with the quote for now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'showCandidates') {
+    return (
+      <div key="show-candidates-step" className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-2">
+                  Recommended Candidates
+                </h3>
+                <p className="text-xs text-gray-600 mb-4">
+                  Here are talented professionals that match your requirements
+                </p>
+              </div>
+              
+              {isLoadingCandidates ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-lime-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">Finding the best candidates for you...</span>
+                </div>
+              ) : candidateRecommendations.length > 0 ? (
+                <div className="space-y-3">
+                  {candidateRecommendations.slice(0, 5).map((candidate, index) => (
+                    <div key={candidate.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm text-gray-900">{capitalizeName(candidate.name)}</h4>
+                          <p className="text-xs text-gray-600 mb-1">{capitalizeName(candidate.position)}</p>
+                          <p className="text-xs text-gray-500">{candidate.experience}</p>
+                          {candidate.skills && candidate.skills.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Skills: {candidate.skills.slice(0, 3).join(', ')}
+                              {candidate.skills.length > 3 && ` +${candidate.skills.length - 3} more`}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs bg-lime-100 text-lime-800 px-2 py-1 rounded">
+                              {candidate.isRecommended ? 'Recommended' : 'Available'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ${candidate.expectedSalary.toLocaleString()}/month
+                            </span>
+                            {candidate.matchScore > 0 && (
+                              <span className="text-xs text-gray-500">
+                                {Math.round(candidate.matchScore * 100)}% match
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Button size="sm" className="text-xs">
+                          View Profile
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500 mb-2">No candidates found</p>
+                  <p className="text-xs text-gray-400">Try adjusting your requirements or check back later</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={() => onStepChange(null)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Close
+                </Button>
+                {candidateRecommendations.length > 0 && (
+                  <Button
+                    onClick={() => onStepChange(null)}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    View All Candidates
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'workplaceSetup') {
+    return (
+      <div key="workplace-setup-step" className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          {/* Maya's Message Bubble without Avatar */}
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  🏢 Workplace Setup
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Do they have the same workplace setup?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleWorkplaceSetupComplete('yes')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  Yes, same setup for all
+                </Button>
+                <Button
+                  onClick={() => handleWorkplaceSetupComplete('no')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  No, different setups needed
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'workplaceType') {
+    return (
+      <div key="workplace-type-step" className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          {/* Maya's Message Bubble without Avatar */}
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  🏢 Workplace Type
+                </h3>
+                <p className="text-xs text-gray-600">
+                  What type of workplace setup do you need?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleWorkplaceTypeComplete('work-from-home')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏠 Work from Home
+                </Button>
+                <Button
+                  onClick={() => handleWorkplaceTypeComplete('hybrid')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏢 Hybrid (Home + Office)
+                </Button>
+                <Button
+                  onClick={() => handleWorkplaceTypeComplete('full-office')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏢 Full Office
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === 'workplaceIndividual') {
+    const currentMember = formData.currentMember || 1
+    const teamSize = parseInt(formData.teamSize || '1')
+    const memberRole = formData[`member${currentMember}Role`] || 'Team Member'
+    
+    return (
+      <div key={`workplace-individual-step-member-${currentMember}`} className="flex justify-start mb-4">
+        <div className="max-w-[80%]">
+          {/* Maya's Message Bubble without Avatar */}
+          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800 mb-1">
+                  🏢 Workplace Setup - {memberRole}
+                </h3>
+                <p className="text-xs text-gray-600">
+                  What type of workplace setup does the {memberRole} need?
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  onClick={() => handleWorkplaceIndividualComplete('work-from-home')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏠 Work from Home
+                </Button>
+                <Button
+                  onClick={() => handleWorkplaceIndividualComplete('hybrid')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏢 Hybrid (Home + Office)
+                </Button>
+                <Button
+                  onClick={() => handleWorkplaceIndividualComplete('full-office')}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-auto justify-start"
+                >
+                  🏢 Full Office
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -442,14 +1102,9 @@ const JobDescriptionStep = ({ onComplete, setMessages, generateMessageId, formDa
       className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-lime-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            M
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Job description?</h3>
-            <p className="text-sm text-gray-600">Tell me more about the job requirements or let me generate one for you</p>
-          </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Job description?</h3>
+          <p className="text-sm text-gray-600">Tell me more about the job requirements or let me generate one for you</p>
         </div>
         
         <div className="space-y-3">

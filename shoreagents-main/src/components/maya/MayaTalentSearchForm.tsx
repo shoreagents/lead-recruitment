@@ -74,16 +74,11 @@ export const MayaTalentSearchForm = ({
       className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm max-w-full"
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-lime-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            M
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Find Your Perfect Talent</h3>
-            <p className="text-sm text-gray-600">
-              {userData?.firstName ? `Hi ${userData.firstName}! ` : ''}Let's find the right talent for your needs
-            </p>
-          </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">Find Your Perfect Talent</h3>
+          <p className="text-sm text-gray-600">
+            {userData?.firstName ? `Hi ${userData.firstName}! ` : ''}Let's find the right talent for your needs
+          </p>
         </div>
 
         <div className="space-y-4">

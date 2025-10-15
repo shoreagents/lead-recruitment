@@ -73,13 +73,15 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
   const [isFullHeight, setIsFullHeight] = useState(false);
   const [isCollectingContact, setIsCollectingContact] = useState(false);
   const [contactStep, setContactStep] = useState<'name' | 'email' | 'company' | null>(null);
+  const [isCollectingIndustry, setIsCollectingIndustry] = useState(false);
   
   const [contactData, setContactData] = useState<{name?: string; email?: string; company?: string}>({});
   const [isTalentSearchOpen, setIsTalentSearchOpen] = useState(false);
   const [isPricingCalculatorOpen, setIsPricingCalculatorOpen] = useState(false);
   const [isCollectingPricing, setIsCollectingPricing] = useState(false);
-  const [pricingStep, setPricingStep] = useState<'teamSize' | 'roleType' | 'roles' | 'experience' | 'description' | 'workplace' | null>(null);
-  const [pricingData, setPricingData] = useState<{teamSize?: string; roleType?: string; roles?: string; experience?: string; description?: string}>({});
+  const [isDirectTeamCreation, setIsDirectTeamCreation] = useState(false);
+  const [pricingStep, setPricingStep] = useState<'teamSize' | 'roleType' | 'industry' | 'individualRoles' | 'experience' | 'description' | 'workplaceSetup' | 'workplaceType' | 'workplaceIndividual' | 'workplace' | null>(null);
+  const [pricingData, setPricingData] = useState<{teamSize?: string; roleType?: string; roles?: string; experience?: string; description?: string; workplaceSetup?: string; workplaceType?: string; currentMember?: number; [key: string]: any}>({});
   const [conversationContext, setConversationContext] = useState<{isTalentInquiry?: boolean; conversationHistory?: Message[]}>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -147,6 +149,43 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
+  // Generate personalized greeting when chat opens and there are no messages
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && !isLoading) {
+      const generatePersonalizedGreeting = async () => {
+        try {
+          setIsLoading(true);
+          const { response, relatedContent, userData } = await generateAIResponse('', [], userId);
+          
+          const greetingMessage: Message = {
+            id: 'personalized-greeting',
+            role: 'assistant',
+            content: response,
+            timestamp: new Date(),
+            relatedContent: relatedContent.length > 0 ? relatedContent : undefined,
+            userData: userData,
+          };
+
+          addMessage(greetingMessage);
+        } catch (error) {
+          console.error('Error generating personalized greeting:', error);
+          // Fallback to generic greeting if personalized greeting fails
+          const fallbackMessage: Message = {
+            id: 'fallback-greeting',
+            role: 'assistant',
+            content: "Hello! I'm Maya from ShoreAgents. What would you like to know?",
+            timestamp: new Date(),
+          };
+          addMessage(fallbackMessage);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      generatePersonalizedGreeting();
+    }
+  }, [isOpen, messages.length, isLoading, generateAIResponse, userId, addMessage]);
+
   useEffect(() => {
     if (isOpen && inputRef.current && !isCollectingContact && !isCollectingPricing) {
       inputRef.current.focus();
@@ -209,7 +248,7 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
     setTimeout(() => adjustTextareaHeight(), 0);
 
     try {
-      const { response, relatedContent, userData } = await generateAIResponse(inputValue, messages, userId);
+      const { response, relatedContent, userData, suggestedComponents } = await generateAIResponse(inputValue, messages, userId);
       
       // Check if this is a talent inquiry
       const messageLower = inputValue.toLowerCase();
@@ -223,6 +262,16 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
                               messageLower.includes('find people') ||
                               messageLower.includes('team building');
       
+      // Direct team creation trigger - only for clear business requests
+      const isDirectTeamCreation = (messageLower.includes('create a team') && 
+                                    (messageLower.includes('need') || messageLower.includes('want') || messageLower.includes('looking'))) ||
+                                   (messageLower.includes('build a team') && 
+                                    (messageLower.includes('need') || messageLower.includes('want') || messageLower.includes('looking'))) ||
+                                   (messageLower.includes('need a team') && 
+                                    (messageLower.includes('for') || messageLower.includes('to') || messageLower.includes('help'))) ||
+                                   (messageLower.includes('want a team') && 
+                                    (messageLower.includes('for') || messageLower.includes('to') || messageLower.includes('help')));
+      
       // Update conversation context
       setConversationContext({
         isTalentInquiry,
@@ -233,6 +282,14 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
           timestamp: new Date(),
         }]
       });
+      
+      // Direct team creation - immediately trigger pricing calculator
+      if (isDirectTeamCreation && !isCollectingPricing) {
+        console.log('🎯 Direct team creation detected, starting pricing calculator immediately');
+        setIsDirectTeamCreation(true);
+        setIsCollectingPricing(true);
+        setPricingStep('teamSize');
+      }
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -248,24 +305,34 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
        // Check if Maya is asking for contact information
        const responseLower = response.toLowerCase();
        
+       // Skip all form triggers for simple greetings and casual conversations
+       const isSimpleGreeting = responseLower.includes('hello') || 
+                                responseLower.includes('hi') || 
+                                responseLower.includes('hey') || 
+                                responseLower.includes('good morning') || 
+                                responseLower.includes('good afternoon') || 
+                                responseLower.includes('good evening') ||
+                                responseLower.includes('how are you') ||
+                                responseLower.includes('how can i help') ||
+                                responseLower.includes('what can i do') ||
+                                responseLower.includes('anything') ||
+                                responseLower.includes('help') ||
+                                responseLower.includes('assist') ||
+                                responseLower.includes('support');
+       
+       // Only trigger contact collection for very specific business-related phrases
        const isAskingForContact = 
-         // Exact phrase matches
+         // Very specific exact phrases only
          responseLower.includes('before we continue our conversation, it\'s okay to have your name?') ||
          responseLower.includes('before we continue our conversation, it\'s okay to have your name') ||
          responseLower.includes('before we continue, it\'s okay to have your name') ||
-         // Maya's actual phrases
-         (responseLower.includes('before we dive in') && responseLower.includes('name')) ||
-         (responseLower.includes('may i first get your name')) ||
-         (responseLower.includes('get your name')) ||
-         // Pattern matches for contact collection
-         (responseLower.includes('before we continue') && responseLower.includes('name')) ||
-         (responseLower.includes('before we continue') && responseLower.includes('contact')) ||
-         (responseLower.includes('before we continue') && responseLower.includes('email')) ||
-         // Alternative patterns
-         (responseLower.includes('before we proceed') && responseLower.includes('name')) ||
-         (responseLower.includes('before we move forward') && responseLower.includes('name')) ||
-         (responseLower.includes('to better assist you') && responseLower.includes('name')) ||
-         (responseLower.includes('to provide you with better service') && responseLower.includes('name'));
+         // Only trigger for business context
+         (responseLower.includes('before we dive in') && responseLower.includes('name') && 
+          (responseLower.includes('business') || responseLower.includes('team') || responseLower.includes('hire'))) ||
+         (responseLower.includes('may i first get your name') && 
+          (responseLower.includes('business') || responseLower.includes('team') || responseLower.includes('hire'))) ||
+         (responseLower.includes('get your name') && 
+          (responseLower.includes('business') || responseLower.includes('team') || responseLower.includes('hire')));
        
        console.log('🔍 Contact trigger check:', {
          response: response,
@@ -274,7 +341,7 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
          isCollectingContact: isCollectingContact
        });
        
-       if (isAskingForContact && !isCollectingContact) {
+       if (isAskingForContact && !isCollectingContact && !isSimpleGreeting && !isCollectingPricing && !isDirectTeamCreation) {
          console.log('🎯 Triggering contact collection form!');
          console.log('🔍 User data check:', userData);
          
@@ -288,18 +355,78 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
          }
        }
 
-       // Check if Maya is suggesting pricing calculator for talent needs
+       // Check if Maya is suggesting pricing calculator for talent needs (PRIORITY)
+       // Only trigger for very specific business-related phrases
        const isSuggestingPricingForTalent = responseLower.includes('pricing_calculator_modal') ||
                                            responseLower.includes('let me help you get a personalized quote for your talent needs') ||
                                            responseLower.includes('personalized quote for your talent') ||
                                            responseLower.includes('pricing calculator') ||
                                            responseLower.includes('pricing quote') ||
-                                           (responseLower.includes('talent') && responseLower.includes('quote'));
+                                           responseLower.includes('personalized quote for your team needs') ||
+                                           responseLower.includes('guide you through a quick form') ||
+                                           responseLower.includes('understand your requirements') ||
+                                           // Only trigger for clear business requests, not casual mentions
+                                           (responseLower.includes('talent') && responseLower.includes('quote') && 
+                                            (responseLower.includes('need') || responseLower.includes('want') || responseLower.includes('looking'))) ||
+                                           (responseLower.includes('team') && responseLower.includes('quote') && 
+                                            (responseLower.includes('need') || responseLower.includes('want') || responseLower.includes('looking'))) ||
+                                           // Direct team creation triggers - only for clear requests
+                                           (responseLower.includes('create a team') && 
+                                            (responseLower.includes('need') || responseLower.includes('want') || responseLower.includes('looking'))) ||
+                                           (responseLower.includes('build a team') && 
+                                            (responseLower.includes('need') || responseLower.includes('want') || responseLower.includes('looking'))) ||
+                                           (responseLower.includes('need a team') && 
+                                            (responseLower.includes('for') || responseLower.includes('to') || responseLower.includes('help'))) ||
+                                           (responseLower.includes('want a team') && 
+                                            (responseLower.includes('for') || responseLower.includes('to') || responseLower.includes('help')));
        
-       if (isSuggestingPricingForTalent && !isCollectingPricing) {
-         console.log('Maya is suggesting pricing calculator for talent needs, starting step-by-step form');
+       console.log('🔍 Pricing trigger check:', {
+         response: response,
+         responseLower: responseLower,
+         isSuggestingPricingForTalent: isSuggestingPricingForTalent,
+         isCollectingPricing: isCollectingPricing,
+         suggestedComponents: suggestedComponents
+       });
+       
+       // Check if pricing calculator is suggested via suggestedComponents
+       const hasPricingCalculatorSuggestion = suggestedComponents && suggestedComponents.includes('pricing_calculator_modal');
+       
+       if ((isSuggestingPricingForTalent || hasPricingCalculatorSuggestion) && !isCollectingPricing) {
+         console.log('🎯 Maya is suggesting pricing calculator for talent needs, starting step-by-step form');
+         console.log('🔧 Setting pricing form state:', { isCollectingPricing: true, pricingStep: 'teamSize' });
          setIsCollectingPricing(true);
          setPricingStep('teamSize');
+       }
+
+       // Check if Maya is asking for industry information (ONLY if not in pricing flow and business context)
+       const isAskingForIndustry = 
+         responseLower.includes('industry') && 
+         (responseLower.includes('business') || responseLower.includes('company') || responseLower.includes('operate')) &&
+         (responseLower.includes('let me know') || responseLower.includes('tell me') || responseLower.includes('what') || responseLower.includes('which')) &&
+         // Only trigger for business-related conversations, not simple greetings
+         (responseLower.includes('talent') || responseLower.includes('team') || responseLower.includes('hire') || 
+          responseLower.includes('staff') || responseLower.includes('recruit') || responseLower.includes('build'));
+       
+       console.log('🔍 Industry trigger check:', {
+         response: response,
+         responseLower: responseLower,
+         isAskingForIndustry: isAskingForIndustry,
+         isCollectingIndustry: isCollectingIndustry,
+         isCollectingPricing: isCollectingPricing,
+         isDirectTeamCreation: isDirectTeamCreation
+       });
+       
+       if (isAskingForIndustry && !isCollectingIndustry && !isCollectingContact && !isCollectingPricing && !isDirectTeamCreation && !isSimpleGreeting) {
+         console.log('🎯 Triggering industry collection form!');
+         console.log('🔍 User data check:', userData);
+         
+         // Check if user already has industry info
+         if (!userData?.user?.industry || userData.user.industry.trim() === '') {
+           console.log('✅ User has no industry info, showing form');
+           setIsCollectingIndustry(true);
+         } else {
+           console.log('❌ User already has industry info, skipping form');
+         }
        }
     } catch (error) {
       console.error('Chat error:', error);
@@ -561,18 +688,77 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
                   />
                 </div>
               )}
+
+              {/* Industry Collection Form */}
+              {isCollectingIndustry && (
+                <div className="mt-4">
+                  <MayaTextField
+                    step="industry"
+                    title="What industry does your business operate in?"
+                    description="This helps me provide more relevant talent recommendations for your specific industry needs."
+                    placeholder="e.g., Technology, Healthcare, Finance, Real Estate, Marketing"
+                    inputType="text"
+                    onComplete={async (industry) => {
+                      try {
+                        // Save industry to user profile
+                        const response = await fetch('/api/update-user-industry', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            userId: userId,
+                            industry: industry
+                          }),
+                        });
+
+                        if (response.ok) {
+                          console.log('Industry updated successfully');
+                          // Add user message to chat
+                          const userMessage: Message = {
+                            id: Date.now().toString(),
+                            role: 'user',
+                            content: `Industry: ${industry}`,
+                            timestamp: new Date(),
+                          };
+                          handleSetMessages(userMessage);
+                          
+                          // Add Maya's response
+                          const mayaMessage: Message = {
+                            id: (Date.now() + 1).toString(),
+                            role: 'assistant',
+                            content: `Great! I can see you're in the ${industry} industry. This will help me provide more relevant talent recommendations. How can I assist you further?`,
+                            timestamp: new Date(),
+                          };
+                          handleSetMessages(mayaMessage);
+                        }
+                      } catch (error) {
+                        console.error('Error updating industry:', error);
+                      } finally {
+                        setIsCollectingIndustry(false);
+                      }
+                    }}
+                    setMessages={handleSetMessages}
+                    generateMessageId={() => Date.now().toString()}
+                    enableAutocomplete={true}
+                    autocompleteContext="business industries for offshore staffing"
+                  />
+                </div>
+              )}
               
               {/* Pricing Collection Form */}
               {isCollectingPricing && pricingStep && (
                 <div className="mt-4">
+                  {console.log('🔧 Rendering pricing form:', { isCollectingPricing, pricingStep })}
                   <MayaPricingForm
                     currentStep={pricingStep}
                     onStepChange={(step: string | null) => {
                       if (step === null) {
                         setIsCollectingPricing(false);
+                        setIsDirectTeamCreation(false);
                         setPricingStep(null);
                       } else {
-                        setPricingStep(step as 'teamSize' | 'roleType' | 'roles' | 'experience' | 'description' | 'workplace');
+                        setPricingStep(step as 'teamSize' | 'roleType' | 'industry' | 'individualRoles' | 'experience' | 'description' | 'workplaceSetup' | 'workplaceType' | 'workplaceIndividual' | 'workplace');
                       }
                     }}
                     onFormDataChange={(data: any) => {

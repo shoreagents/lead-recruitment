@@ -3,17 +3,22 @@ import Anthropic from '@anthropic-ai/sdk';
 import { searchKnowledge, knowledgeBase } from '@/lib/knowledge-base';
 import { createClient } from '@/lib/supabase/client';
 import { getSystemPrompt } from '@/lib/ai-config';
+import { SIMPLIFIED_AI_CONFIG } from '@/lib/ai-config-simplified';
 
 // Conversation analysis function
 function analyzeConversation(message: string, conversationHistory: Array<{ role: string; content: string }>, userData: any) {
-  const messageLower = message.toLowerCase();
-  const fullConversation = [...conversationHistory.map(msg => msg.content), message].join(' ').toLowerCase();
+  const messageLower = (message || '').toLowerCase();
+  const fullConversation = [...conversationHistory.map(msg => msg.content), message || ''].join(' ').toLowerCase();
   
   // Analyze user intent - be more specific to avoid false positives
   let intent = 'general_inquiry';
   
+  // Handle empty messages as greetings
+  if (!message || message.trim() === '') {
+    intent = 'greeting';
+  }
   // Only detect specific business intents for clear requests
-  if (messageLower.includes('pricing') || messageLower.includes('cost') || messageLower.includes('price') || messageLower.includes('quote')) {
+  else if (messageLower.includes('pricing') || messageLower.includes('cost') || messageLower.includes('price') || messageLower.includes('quote')) {
     intent = 'pricing_inquiry';
   } else if (messageLower.includes('talent') || messageLower.includes('hire') || messageLower.includes('team') || messageLower.includes('staff')) {
     // Only if it's a clear business request, not just casual mention
@@ -31,7 +36,7 @@ function analyzeConversation(message: string, conversationHistory: Array<{ role:
   
   // Determine conversation stage
   let stage = 'initial';
-  if (conversationHistory.length === 0) {
+  if (conversationHistory.length === 0 || (!message || message.trim() === '')) {
     stage = 'greeting';
   } else if (conversationHistory.length < 3) {
     stage = 'exploration';
@@ -184,10 +189,10 @@ export async function POST(request: NextRequest) {
 
     const { message, conversationHistory, userId }: { message: string; conversationHistory: Array<{ role: string; content: string }>; userId?: string } = requestBody;
 
-    // Validate required fields
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    // Validate required fields - allow empty messages for initial greetings
+    if (typeof message !== 'string') {
       return NextResponse.json(
-        { error: 'Message is required and must be a non-empty string' },
+        { error: 'Message must be a string' },
         { status: 400 }
       );
     }
@@ -228,10 +233,10 @@ export async function POST(request: NextRequest) {
       content: msg.content
     }));
 
-    // Add the current user message
+    // Add the current user message (or a greeting if empty)
     messages.push({
       role: 'user' as const,
-      content: message
+      content: message || 'hello'
     });
 
     // Fetch user data for personalization if userId is provided
@@ -339,12 +344,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Search knowledge base for relevant information (skip for simple greetings)
+    // Search knowledge base for relevant information (skip for simple greetings and empty messages)
     let relevantKnowledge = null;
-    const messageLower = message.toLowerCase().trim();
+    const messageLower = (message || '').toLowerCase().trim();
     const simpleGreetings = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy', 'greetings'];
     
-    if (!simpleGreetings.includes(messageLower)) {
+    if (message && !simpleGreetings.includes(messageLower)) {
       relevantKnowledge = searchKnowledge(message);
     }
     
@@ -385,9 +390,9 @@ export async function POST(request: NextRequest) {
     });
     
   // Analyze conversation context and user intent
-  const conversationAnalysis = analyzeConversation(message, conversationHistory, userData);
+  const conversationAnalysis = analyzeConversation(message || 'greeting', conversationHistory, userData);
   console.log('🔍 Conversation Analysis:', {
-    message: message,
+    message: message || 'greeting',
     intent: conversationAnalysis.intent,
     stage: conversationAnalysis.stage,
     topics: conversationAnalysis.topics
@@ -483,7 +488,7 @@ export async function POST(request: NextRequest) {
     // Determine status-based question
     const hasCompany = user.company && user.company.trim() !== '';
     const hasIndustry = user.industry && user.industry.trim() !== '';
-    const isReturningUser = quotes.length > 0 || userProfile.recentActivity?.length > 0;
+    const isReturningUser = quotes.length > 0 || (userData.recentActivity && userData.recentActivity.length > 0);
     
     if (hasCompany && hasIndustry) {
       statusBasedQuestion = "Since you're from an established company, would you like me to show you our talent pool to find the right team members for your business needs?";
@@ -497,10 +502,23 @@ export async function POST(request: NextRequest) {
       statusBasedQuestion = "Great to meet you! Let me help you discover what ShoreAgents can do for your business. Would you like to start with our talent pool or get a pricing quote?";
     }
 
-    // Create personalized greeting context
-    const fullName = user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Not provided';
+    // Helper function to capitalize names
+    const capitalizeName = (name: string): string => {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+    }
+    
+    // Create personalized greeting context with capitalized names
+    const capitalizedFirstName = user.first_name ? capitalizeName(user.first_name) : user.first_name
+    const capitalizedLastName = user.last_name ? capitalizeName(user.last_name) : user.last_name
+    const fullName = user.first_name ? `${capitalizedFirstName} ${capitalizedLastName || ''}`.trim() : 'Not provided';
     console.log('🔍 Personalized Context - User Name:', fullName);
     console.log('🔍 First Name:', user.first_name, 'Last Name:', user.last_name);
+    
+    // Add specific greeting instruction for users with names
+    const greetingInstruction = user.first_name ? `\n\nGREETING INSTRUCTION: Since this user has a name (${fullName}), you MUST start your response with a personalized greeting like "Hello ${capitalizedFirstName}!" or "Hi ${capitalizedFirstName}!"` : '';
     
     personalizedContext = `\n\nPERSONALIZED USER CONTEXT:
 - User Type: ${user.user_type}
@@ -512,7 +530,7 @@ export async function POST(request: NextRequest) {
 - Has Contact Info: ${userProfile.hasContactInfo}
 - Interests: ${userProfile.interests.join(', ') || 'None specified'}
 - Potential Needs: ${userProfile.potentialNeeds.join(', ') || 'None identified'}
-- Status-Based Question: ${statusBasedQuestion}
+- Status-Based Question: ${statusBasedQuestion}${greetingInstruction}
 
 CONVERSATION ANALYSIS:
 - User Intent: ${conversationAnalysis.intent}
@@ -588,7 +606,10 @@ CONVERSATION ANALYSIS:
     ? allRelevantKnowledge.map(item => `- ${item.title}: ${item.content}`).join('\n')
     : '';
 
-  const systemPrompt = getSystemPrompt(userData, knowledgeContext, personalizedContext);
+  // Use simplified AI config to avoid hardcoded responses
+  const systemPrompt = userData && userData.user 
+    ? SIMPLIFIED_AI_CONFIG.systemPrompts.withPersonalization(userData)
+    : SIMPLIFIED_AI_CONFIG.systemPrompts.base;
 
     // Log request details (without sensitive information)
     console.log('Processing chat request...');

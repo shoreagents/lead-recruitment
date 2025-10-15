@@ -75,14 +75,9 @@ export const MayaNameFields = ({
       className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm max-w-full"
     >
       <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-lime-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-            M
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">What's your name?</h3>
-            <p className="text-sm text-gray-600">Please enter your first name and surname</p>
-          </div>
+        <div>
+          <h3 className="font-semibold text-gray-900">What's your name?</h3>
+          <p className="text-sm text-gray-600">Please enter your first name and surname</p>
         </div>
         <div className="flex gap-1 w-full">
           <input

@@ -11,13 +11,15 @@ interface UseAIAutocompleteOptions {
   debounceMs?: number
   minLength?: number
   maxSuggestions?: number
+  defaultType?: 'industry' | 'role' | 'description'
 }
 
 export const useAIAutocomplete = (options: UseAIAutocompleteOptions = {}) => {
   const {
     debounceMs = 300,
     minLength = 2,
-    maxSuggestions = 3
+    maxSuggestions = 3,
+    defaultType = 'role'
   } = options
 
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([])
@@ -35,15 +37,26 @@ export const useAIAutocomplete = (options: UseAIAutocompleteOptions = {}) => {
     setError(null)
 
     try {
+      // Determine the type based on context or use defaultType
+      let type = defaultType
+      if (context.includes('industry')) {
+        type = 'industry'
+      } else if (context.includes('description')) {
+        type = 'description'
+      }
+      
+
       const response = await fetch('/api/autocomplete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input,
-          context,
-          maxSuggestions
+          query: input,
+          user_id: 'maya-field', // Add user_id for Maya fields
+          type: type,
+          industry: '',
+          roleTitle: ''
         }),
       })
 
@@ -52,13 +65,33 @@ export const useAIAutocomplete = (options: UseAIAutocompleteOptions = {}) => {
       }
 
       const data = await response.json()
+      console.log('🔍 Autocomplete API response:', data)
       
       if (data.error) {
         console.warn('Autocomplete API error:', data.error)
         setError(data.error)
+        setSuggestions([]) // Don't show any suggestions on error
+        return
       }
       
-      setSuggestions(data.suggestions || [])
+      // The API returns an array directly, not wrapped in suggestions
+      const suggestionsArray = Array.isArray(data) ? data : (data.suggestions || [])
+      console.log('📋 Suggestions array:', suggestionsArray)
+      
+      if (suggestionsArray.length === 0) {
+        console.log('📭 No AI suggestions available')
+        setSuggestions([])
+        return
+      }
+      
+      // Transform the API response to match the expected format
+      const transformedSuggestions = suggestionsArray.map((item: any, index: number) => ({
+        text: item.title || item.text || item,
+        confidence: item.confidence || (0.9 - (index * 0.1)) // Dynamic confidence based on order
+      }))
+      
+      console.log('✨ Transformed suggestions:', transformedSuggestions)
+      setSuggestions(transformedSuggestions)
     } catch (err) {
       console.error('Autocomplete error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch suggestions')

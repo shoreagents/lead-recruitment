@@ -39,112 +39,6 @@ export function AIRoleAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [shouldFetchAI, setShouldFetchAI] = useState(false);
   
-  // Industry-specific roles for instant suggestions
-  const getIndustrySpecificRoles = (industry: string): AIRoleSuggestion[] => {
-    const industryLower = industry.toLowerCase();
-    
-    if (industryLower.includes('technology') || industryLower.includes('software') || industryLower.includes('it')) {
-      return [
-        { title: 'Software Developer', description: 'Develops software applications and systems', level: 'mid' },
-        { title: 'DevOps Engineer', description: 'Manages infrastructure and deployment pipelines', level: 'senior' },
-        { title: 'Product Manager', description: 'Defines product strategy and roadmap', level: 'senior' },
-        { title: 'UX Designer', description: 'Designs user experiences and interfaces', level: 'mid' },
-        { title: 'Data Scientist', description: 'Analyzes complex data to drive business decisions', level: 'senior' },
-        { title: 'QA Engineer', description: 'Tests software quality and functionality', level: 'mid' },
-        { title: 'Technical Writer', description: 'Creates technical documentation and guides', level: 'mid' },
-        { title: 'System Administrator', description: 'Manages IT infrastructure and systems', level: 'mid' }
-      ];
-    } else if (industryLower.includes('healthcare') || industryLower.includes('medical')) {
-      return [
-        { title: 'Medical Assistant', description: 'Supports healthcare providers with patient care', level: 'entry' },
-        { title: 'Nurse', description: 'Provides direct patient care and medical support', level: 'mid' },
-        { title: 'Medical Records Specialist', description: 'Manages patient health information', level: 'entry' },
-        { title: 'Healthcare Administrator', description: 'Oversees healthcare facility operations', level: 'senior' },
-        { title: 'Medical Billing Specialist', description: 'Handles insurance claims and billing', level: 'mid' },
-        { title: 'Patient Care Coordinator', description: 'Coordinates patient care and scheduling', level: 'mid' },
-        { title: 'Medical Receptionist', description: 'Manages front desk and patient check-in', level: 'entry' },
-        { title: 'Healthcare Data Analyst', description: 'Analyzes healthcare data and outcomes', level: 'mid' }
-      ];
-    } else if (industryLower.includes('finance') || industryLower.includes('banking')) {
-      return [
-        { title: 'Financial Analyst', description: 'Analyzes financial data and market trends', level: 'mid' },
-        { title: 'Accountant', description: 'Manages financial records and reporting', level: 'mid' },
-        { title: 'Loan Officer', description: 'Evaluates and processes loan applications', level: 'mid' },
-        { title: 'Investment Advisor', description: 'Provides investment guidance to clients', level: 'senior' },
-        { title: 'Credit Analyst', description: 'Assesses creditworthiness of borrowers', level: 'mid' },
-        { title: 'Financial Planner', description: 'Helps clients plan their financial future', level: 'senior' },
-        { title: 'Bank Teller', description: 'Handles customer transactions and banking services', level: 'entry' },
-        { title: 'Risk Manager', description: 'Identifies and manages financial risks', level: 'senior' }
-      ];
-    } else if (industryLower.includes('real estate') || industryLower.includes('property')) {
-      return [
-        { title: 'Real Estate Agent', description: 'Helps clients buy and sell properties', level: 'mid' },
-        { title: 'Property Manager', description: 'Manages rental properties and tenants', level: 'mid' },
-        { title: 'Real Estate Appraiser', description: 'Evaluates property values for transactions', level: 'senior' },
-        { title: 'Leasing Consultant', description: 'Shows properties and handles lease agreements', level: 'entry' },
-        { title: 'Real Estate Broker', description: 'Oversees real estate transactions and agents', level: 'senior' },
-        { title: 'Property Coordinator', description: 'Coordinates property maintenance and services', level: 'mid' },
-        { title: 'Real Estate Assistant', description: 'Supports real estate professionals', level: 'entry' },
-        { title: 'Commercial Real Estate Agent', description: 'Specializes in commercial property transactions', level: 'senior' }
-      ];
-    } else if (industryLower.includes('construction') || industryLower.includes('building')) {
-      return [
-        { title: 'Construction Manager', description: 'Oversees construction projects and teams', level: 'senior' },
-        { title: 'Project Engineer', description: 'Manages technical aspects of construction projects', level: 'mid' },
-        { title: 'Site Supervisor', description: 'Supervises construction site operations', level: 'mid' },
-        { title: 'Construction Coordinator', description: 'Coordinates project schedules and resources', level: 'mid' },
-        { title: 'Safety Manager', description: 'Ensures workplace safety compliance', level: 'senior' },
-        { title: 'Construction Assistant', description: 'Supports construction management activities', level: 'entry' },
-        { title: 'Quality Control Inspector', description: 'Inspects construction quality and standards', level: 'mid' },
-        { title: 'Construction Administrator', description: 'Handles administrative tasks for projects', level: 'mid' }
-      ];
-    } else if (industryLower.includes('retail') || industryLower.includes('commerce')) {
-      return [
-        { title: 'Store Manager', description: 'Oversees retail store operations', level: 'senior' },
-        { title: 'Sales Associate', description: 'Assists customers and processes sales', level: 'entry' },
-        { title: 'Inventory Manager', description: 'Manages product inventory and stock levels', level: 'mid' },
-        { title: 'Customer Service Representative', description: 'Provides customer support and assistance', level: 'entry' },
-        { title: 'Visual Merchandiser', description: 'Creates attractive product displays', level: 'mid' },
-        { title: 'Retail Buyer', description: 'Selects and purchases products for stores', level: 'senior' },
-        { title: 'Loss Prevention Specialist', description: 'Prevents theft and ensures security', level: 'mid' },
-        { title: 'Retail Coordinator', description: 'Coordinates retail operations and activities', level: 'mid' }
-      ];
-    } else if (industryLower.includes('education') || industryLower.includes('learning')) {
-      return [
-        { title: 'Teacher', description: 'Educates students in various subjects', level: 'mid' },
-        { title: 'Administrative Assistant', description: 'Supports educational administration', level: 'entry' },
-        { title: 'Student Services Coordinator', description: 'Coordinates student support services', level: 'mid' },
-        { title: 'Curriculum Developer', description: 'Develops educational programs and materials', level: 'senior' },
-        { title: 'Academic Advisor', description: 'Guides students in academic planning', level: 'mid' },
-        { title: 'Education Administrator', description: 'Manages educational institution operations', level: 'senior' },
-        { title: 'Librarian', description: 'Manages library resources and services', level: 'mid' },
-        { title: 'Education Coordinator', description: 'Coordinates educational programs and events', level: 'mid' }
-      ];
-    } else if (industryLower.includes('manufacturing') || industryLower.includes('production')) {
-      return [
-        { title: 'Production Manager', description: 'Oversees manufacturing production processes', level: 'senior' },
-        { title: 'Quality Assurance Manager', description: 'Ensures product quality standards', level: 'senior' },
-        { title: 'Manufacturing Engineer', description: 'Optimizes manufacturing processes', level: 'mid' },
-        { title: 'Production Supervisor', description: 'Supervises production line operations', level: 'mid' },
-        { title: 'Inventory Coordinator', description: 'Manages raw materials and finished goods', level: 'mid' },
-        { title: 'Safety Coordinator', description: 'Ensures workplace safety in manufacturing', level: 'mid' },
-        { title: 'Production Planner', description: 'Plans and schedules production activities', level: 'mid' },
-        { title: 'Manufacturing Assistant', description: 'Supports manufacturing operations', level: 'entry' }
-      ];
-    } else {
-      // Generic roles for unspecified industries
-      return [
-        { title: 'Project Manager', description: 'Manages projects and coordinates team activities', level: 'senior' },
-        { title: 'Administrative Assistant', description: 'Provides administrative support', level: 'entry' },
-        { title: 'Customer Service Representative', description: 'Provides customer support and assistance', level: 'entry' },
-        { title: 'Sales Representative', description: 'Handles customer sales and relationship building', level: 'entry' },
-        { title: 'Marketing Coordinator', description: 'Coordinates marketing activities and campaigns', level: 'mid' },
-        { title: 'Data Analyst', description: 'Analyzes data to provide business insights', level: 'mid' },
-        { title: 'Operations Manager', description: 'Oversees daily business operations', level: 'senior' },
-        { title: 'Business Analyst', description: 'Analyzes business processes and requirements', level: 'mid' }
-      ];
-    }
-  };
 
   const userId = generateUserId();
   
@@ -163,19 +57,14 @@ export function AIRoleAutocomplete({
     industry
   );
 
-  // Combine industry-specific roles and AI suggestions
-  const industryRoles = getIndustrySpecificRoles(industry);
+  // Use only AI suggestions - no hardcoded fallbacks
   const suggestions = searchQuery.length >= 2 && aiSuggestions && Array.isArray(aiSuggestions) && debouncedQuery === searchQuery
     ? aiSuggestions.map(suggestion => ({
         title: suggestion.title,
         description: suggestion.description,
         level: suggestion.level as 'entry' | 'mid' | 'senior'
       }))
-    : searchQuery.length >= 2 
-      ? industryRoles.filter(role =>
-          role.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : industryRoles;
+    : [];
   
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
