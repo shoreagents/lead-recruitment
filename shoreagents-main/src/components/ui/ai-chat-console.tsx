@@ -391,11 +391,31 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
        // Check if pricing calculator is suggested via suggestedComponents
        const hasPricingCalculatorSuggestion = suggestedComponents && suggestedComponents.includes('pricing_calculator_modal');
        
-       if ((isSuggestingPricingForTalent || hasPricingCalculatorSuggestion) && !isCollectingPricing) {
+       // Check if candidates were recently shown (in the last 5 messages)
+       const recentMessages = messages.slice(-5);
+       const candidatesRecentlyShown = recentMessages.some(msg => msg.type === 'candidates');
+       
+       // Check if user is asking about candidates (not requesting new ones)
+       const isAskingAboutCandidates = 
+         inputValue.toLowerCase().includes('ask about') ||
+         inputValue.toLowerCase().includes('tell me about') ||
+         inputValue.toLowerCase().includes('know about') ||
+         inputValue.toLowerCase().includes('can i ask') ||
+         (inputValue.toLowerCase().includes('candidate') && 
+          (inputValue.toLowerCase().includes('about') || inputValue.toLowerCase().includes('?')));
+       
+       if ((isSuggestingPricingForTalent || hasPricingCalculatorSuggestion) && 
+           !isCollectingPricing && 
+           !candidatesRecentlyShown && 
+           !isAskingAboutCandidates) {
          console.log('🎯 Maya is suggesting pricing calculator for talent needs, starting step-by-step form');
          console.log('🔧 Setting pricing form state:', { isCollectingPricing: true, pricingStep: 'teamSize' });
          setIsCollectingPricing(true);
          setPricingStep('teamSize');
+       } else if (candidatesRecentlyShown) {
+         console.log('⏭️ Skipping pricing form trigger - candidates were recently shown');
+       } else if (isAskingAboutCandidates) {
+         console.log('⏭️ Skipping pricing form trigger - user is asking about existing candidates');
        }
 
        // Check if Maya is asking for industry information (ONLY if not in pricing flow and business context)
@@ -452,6 +472,13 @@ const ChatConsole: React.FC<ChatConsoleProps> = ({ isOpen, onClose }) => {
 
   const renderMessage = (message: Message) => {
     const isUser = message.role === 'user';
+    
+    // Handle special message types
+    if (message.type === 'candidates' && message.data?.candidates) {
+      // Import the candidates component dynamically
+      const { MayaCandidatesMessage } = require('@/components/maya');
+      return <MayaCandidatesMessage key={message.id} candidates={message.data.candidates} />;
+    }
     
     return (
       <div
