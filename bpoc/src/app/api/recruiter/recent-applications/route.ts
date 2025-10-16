@@ -1,18 +1,27 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/database'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     console.log('🚀 Recruiter Recent Applications API: Starting to fetch recent recruiter applications...')
+    
+    // Get recruiter ID from headers (set by middleware)
+    const recruiterId = request.headers.get('x-user-id');
+    if (!recruiterId) {
+      console.log('❌ No recruiter ID found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('🔍 Fetching applications for recruiter:', recruiterId);
     
     const client = await pool.connect()
     
     try {
-      // Get only recruiter job applications
+      // Get only applications for jobs posted by this specific recruiter
       const activities = []
       
-      // Fetch from recruiter_applications table (recruiter jobs only)
-      console.log('🔍 Fetching from recruiter_applications table...')
+      // Fetch from recruiter_applications table (only for this recruiter's jobs)
+      console.log('🔍 Fetching from recruiter_applications table for recruiter:', recruiterId)
       const recruiterApplicationQuery = `
         SELECT 
           'applicants' as type,
@@ -24,37 +33,20 @@ export async function GET() {
         FROM recruiter_applications ra
         JOIN users u ON ra.user_id = u.id
         LEFT JOIN recruiter_jobs rj ON ra.job_id = rj.id
+        WHERE rj.recruiter_id = $1
         ORDER BY ra.created_at DESC
         LIMIT 10
       `
-      const recruiterApplicationResult = await client.query(recruiterApplicationQuery)
-      console.log('📝 Recruiter application activities found:', recruiterApplicationResult.rows.length)
+      const recruiterApplicationResult = await client.query(recruiterApplicationQuery, [recruiterId])
+      console.log('📝 Recruiter application activities found for this recruiter:', recruiterApplicationResult.rows.length)
       console.log('📝 Sample recruiter application data:', recruiterApplicationResult.rows.slice(0, 2))
       if (recruiterApplicationResult.rows.length > 0) {
         activities.push(...recruiterApplicationResult.rows)
       }
       
-      // Fallback: Simple query without JOINs if the above fails
+      // No fallback needed - if no applications, show empty state
       if (recruiterApplicationResult.rows.length === 0) {
-        console.log('🔍 Trying fallback query for recruiter applications...')
-        const recruiterFallbackQuery = `
-          SELECT 
-            'applicants' as type,
-            u.full_name as user_name,
-            u.avatar_url as user_avatar,
-            'Applied for a recruiter job' as action,
-            NULL as score,
-            ra.created_at as activity_time
-          FROM recruiter_applications ra
-          JOIN users u ON ra.user_id = u.id
-          ORDER BY ra.created_at DESC
-          LIMIT 10
-        `
-        const recruiterFallbackResult = await client.query(recruiterFallbackQuery)
-        console.log('📝 Fallback recruiter application activities found:', recruiterFallbackResult.rows.length)
-        if (recruiterFallbackResult.rows.length > 0) {
-          activities.push(...recruiterFallbackResult.rows)
-        }
+        console.log('📝 No applications found for this recruiter - they haven\'t posted jobs yet or received applications')
       }
       
       // Sort all activities by time (most recent first)
@@ -73,55 +65,12 @@ export async function GET() {
         activity_time: a.activity_time
       })))
       
-      // If no real data, provide sample recruiter application data
+      // If no real data, return empty array (no sample data for new recruiters)
       if (recentActivity.length === 0) {
-        console.log('⚠️ No recruiter application data found, providing sample recruiter application data...')
-        const sampleData = [
-          {
-            user_name: 'John Doe',
-            user_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-            action: 'Applied for: Customer Service Representative',
-            score: null,
-            type: 'applicants',
-            activity_time: new Date().toISOString()
-          },
-          {
-            user_name: 'Jane Smith',
-            user_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-            action: 'Applied for: Technical Support Specialist',
-            score: null,
-            type: 'applicants',
-            activity_time: new Date(Date.now() - 3600000).toISOString()
-          },
-          {
-            user_name: 'Mike Johnson',
-            user_avatar: null, // This one will show initials
-            action: 'Applied for: Sales Representative',
-            score: null,
-            type: 'applicants',
-            activity_time: new Date(Date.now() - 7200000).toISOString()
-          },
-          {
-            user_name: 'Sarah Wilson',
-            user_avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-            action: 'Applied for: Data Entry Specialist',
-            score: null,
-            type: 'applicants',
-            activity_time: new Date(Date.now() - 10800000).toISOString()
-          },
-          {
-            user_name: 'David Brown',
-            user_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-            action: 'Applied for: Customer Service Representative',
-            score: null,
-            type: 'applicants',
-            activity_time: new Date(Date.now() - 14400000).toISOString()
-          }
-        ]
-        
+        console.log('📝 No applications found for this recruiter - showing empty state')
         return NextResponse.json({ 
-          recent_activity: sampleData,
-          message: 'Using sample recruiter application data - no real recruiter applications found'
+          recent_activity: [],
+          message: 'No applications yet. Post your first job to start receiving applications!'
         })
       }
       

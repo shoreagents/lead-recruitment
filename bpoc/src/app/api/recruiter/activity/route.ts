@@ -14,10 +14,21 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Recruiter ID:', recruiterId);
 
+    // Check if Prisma client is properly initialized
+    if (!prisma || Object.keys(prisma).length === 0) {
+      console.error('❌ Prisma client not initialized');
+      return NextResponse.json({
+        success: true,
+        activities: [],
+        total: 0,
+        message: 'Database not ready - showing empty activities'
+      });
+    }
+
     // Verify user is a recruiter
     let user;
     try {
-      user = await (prisma as any).user.findUnique({
+      user = await prisma.user.findUnique({
         where: { id: recruiterId },
         select: { admin_level: true, company: true }
       });
@@ -28,7 +39,7 @@ export async function GET(request: NextRequest) {
         success: true,
         activities: [],
         total: 0,
-        error: 'Database connection issue - showing empty activities'
+        message: 'Database connection issue - showing empty activities'
       });
     }
     
@@ -50,7 +61,7 @@ export async function GET(request: NextRequest) {
     // Fetch job postings
     let jobsData = [];
     try {
-      jobsData = await (prisma as any).recruiterJob.findMany({
+      jobsData = await prisma.recruiterJob.findMany({
         where: { recruiter_id: recruiterId },
         select: {
           id: true,
@@ -79,7 +90,7 @@ export async function GET(request: NextRequest) {
       const recruiterJobIds = jobsData.map(job => job.id);
       
       if (recruiterJobIds.length > 0) {
-        applicationsData = await (prisma as any).recruiterApplication.findMany({
+        applicationsData = await prisma.recruiterApplication.findMany({
           where: {
             job_id: { in: recruiterJobIds }
           },
@@ -108,7 +119,7 @@ export async function GET(request: NextRequest) {
     try {
       const jobIds = [...new Set(applicationsData?.map(app => app.job_id) || [])];
       if (jobIds.length > 0) {
-        const jobsForApps = await (prisma as any).recruiterJob.findMany({
+        const jobsForApps = await prisma.recruiterJob.findMany({
           where: {
             id: { in: jobIds },
             recruiter_id: recruiterId  // Ensure only this recruiter's jobs
@@ -130,7 +141,7 @@ export async function GET(request: NextRequest) {
     let userMap = new Map();
     try {
       const userIds = [...new Set(applicationsData?.map(app => app.user_id) || [])];
-      const users = userIds.length > 0 ? await (prisma as any).user.findMany({
+      const users = userIds.length > 0 ? await prisma.user.findMany({
         where: { id: { in: userIds } },
         select: {
           id: true,
@@ -276,11 +287,18 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Successfully fetched activities:', recentActivities.length);
 
-    return NextResponse.json({
+    // Add helpful message for new recruiters
+    const response: any = {
       success: true,
       activities: recentActivities,
       total: activities.length
-    });
+    };
+
+    if (activities.length === 0) {
+      response.message = 'No activities yet. Start by posting your first job to see activity here!';
+    }
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('❌ Error fetching recruiter activity:', error);

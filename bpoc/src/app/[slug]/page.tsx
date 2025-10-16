@@ -472,9 +472,12 @@ export default function ProfilePage() {
       // Get the current session token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.error('No session found');
+        console.error('❌ No session found');
         return;
       }
+
+      console.log('🔄 Saving work status for user:', userProfile.id);
+      console.log('📝 Work status data:', editedWorkStatus);
 
       const response = await fetch('/api/user/update-work-status', {
         method: 'PUT',
@@ -490,7 +493,12 @@ export default function ProfilePage() {
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Work status saved successfully:', result);
+        
         // Update the local state
         setUserProfile(prev => prev ? {
           ...prev,
@@ -507,10 +515,19 @@ export default function ProfilePage() {
         } : null);
         setIsEditingWorkStatus(false);
       } else {
-        console.error('Failed to save work status changes');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Failed to save work status changes:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        // Show user-friendly error message
+        alert(`Failed to save work status: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error saving work status changes:', error);
+      console.error('❌ Error saving work status changes:', error);
+      alert(`Error saving work status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
     }

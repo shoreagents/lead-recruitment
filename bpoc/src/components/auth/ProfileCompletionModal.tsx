@@ -101,7 +101,7 @@ const steps = [
 export default function ProfileCompletionModal({ 
   open, 
   onOpenChange, 
-  onComplete 
+  onComplete
 }: ProfileCompletionModalProps) {
   const { user, updateProfile } = useAuth()
   const router = useRouter()

@@ -462,6 +462,7 @@ export default function Header({}: HeaderProps) {
     }
   }, [user?.id])
 
+
   // Check for saved resumes
   useEffect(() => {
     const checkSavedResumes = async () => {
@@ -493,29 +494,48 @@ export default function Header({}: HeaderProps) {
   }, [user?.id])
   
   // Extract user info with fallback to Google OAuth data
+  // Only show user name if they have actually signed in (not just signed up)
+  // Use state for sessionStorage values to prevent hydration issues
+  const [hasSignedIn, setHasSignedIn] = useState(false)
+  const [isJustSignedUp, setIsJustSignedUp] = useState(false)
+  
+  // Update sessionStorage values on client side only
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setHasSignedIn(sessionStorage.getItem('hasSignedIn') === 'true')
+      setIsJustSignedUp(sessionStorage.getItem('justSignedUp') === 'true')
+    }
+  }, [])
+  
   const userDisplayName = profileLoading ? 'Loading...' : (
-    userProfile?.full_name || 
-    (userProfile?.first_name && userProfile?.last_name ? `${userProfile.first_name} ${userProfile.last_name}` : null) ||
-    userProfile?.username || 
-    // Fallback to Google OAuth data when Railway data isn't available yet
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    (user?.user_metadata?.given_name && user?.user_metadata?.family_name ? 
-      `${user.user_metadata.given_name} ${user.user_metadata.family_name}` : null) ||
-    (user?.user_metadata?.first_name && user?.user_metadata?.last_name ? 
-      `${user.user_metadata.first_name} ${user.user_metadata.last_name}` : null) ||
-    user?.email?.split('@')[0] ||
-    'User'
+    // Only show profile data if user has signed in
+    (hasSignedIn && !isJustSignedUp) ? (
+      userProfile?.full_name || 
+      (userProfile?.first_name && userProfile?.last_name ? `${userProfile.first_name} ${userProfile.last_name}` : null) ||
+      userProfile?.username || 
+      // Fallback to Google OAuth data when Railway data isn't available yet
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      (user?.user_metadata?.given_name && user?.user_metadata?.family_name ? 
+        `${user.user_metadata.given_name} ${user.user_metadata.family_name}` : null) ||
+      (user?.user_metadata?.first_name && user?.user_metadata?.last_name ? 
+        `${user.user_metadata.first_name} ${user.user_metadata.last_name}` : null) ||
+      user?.email?.split('@')[0] ||
+      'User'
+    ) : 'User'
   )
   const userInitials = profileLoading ? 'L' : (
-    userProfile?.full_name 
-      ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
-      : (userProfile?.first_name && userProfile?.last_name 
-          ? `${userProfile.first_name[0]}${userProfile.last_name[0]}`.toUpperCase()
-          : userProfile?.username?.[0]?.toUpperCase() || 
-          // Fallback to Google OAuth data for initials
-          (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.given_name)?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ||
-          user?.email?.[0]?.toUpperCase() || 'U')
+    // Only show profile initials if user has signed in
+    (hasSignedIn && !isJustSignedUp) ? (
+      userProfile?.full_name 
+        ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
+        : (userProfile?.first_name && userProfile?.last_name 
+            ? `${userProfile.first_name[0]}${userProfile.last_name[0]}`.toUpperCase()
+            : userProfile?.username?.[0]?.toUpperCase() || 
+            // Fallback to Google OAuth data for initials
+            (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.given_name)?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ||
+            user?.email?.[0]?.toUpperCase() || 'U')
+    ) : 'U'
   )
   
 

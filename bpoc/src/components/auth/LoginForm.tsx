@@ -70,6 +70,15 @@ export default function LoginForm({ open, onOpenChange, onSwitchToSignUp }: Logi
         else if (error.message.includes('Email not confirmed')) setErrors({ general: 'Please check your email and confirm your account before signing in.' })
         else setErrors({ general: error.message })
       } else if (data.user) {
+        // Clear the signup flag since user is now signing in
+        sessionStorage.removeItem('justSignedUp')
+        sessionStorage.removeItem('googleOAuthFlow')
+        // Set flag to indicate user has signed in
+        sessionStorage.setItem('hasSignedIn', 'true')
+        
+        // Dispatch event to trigger profile check after sign-in
+        window.dispatchEvent(new CustomEvent('userSignedIn'))
+        
         onOpenChange(false)
         setEmail('')
         setPassword('')
@@ -86,6 +95,16 @@ export default function LoginForm({ open, onOpenChange, onSwitchToSignUp }: Logi
   const handleSocialLogin = async () => {
     try {
       setIsLoading(true)
+      
+      // Clear the signup flag since user is now signing in
+      sessionStorage.removeItem('justSignedUp')
+      sessionStorage.removeItem('googleOAuthFlow')
+      // Set flag to indicate user has signed in
+      sessionStorage.setItem('hasSignedIn', 'true')
+      
+      // Dispatch event to trigger profile check after sign-in
+      window.dispatchEvent(new CustomEvent('userSignedIn'))
+      
       const { error } = await signInWithGoogle()
       if (error) {
         console.error('Google login error:', error)

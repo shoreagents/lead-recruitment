@@ -246,6 +246,47 @@ function HomePageContent() {
         return
       }
 
+      // Add a small delay to ensure session storage flags are set
+      if (retryCount === 0) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
+      // Check if user just signed up (not signed in yet)
+      // If user has no session or is in signup flow, don't check profile yet
+      const isSignupFlow = (typeof window !== 'undefined' && sessionStorage.getItem('googleOAuthFlow') === 'signup') || 
+                          (typeof window !== 'undefined' && sessionStorage.getItem('justSignedUp') === 'true')
+      
+      console.log('🔍 HomePage: Checking signup flow flags:', {
+        googleOAuthFlow: typeof window !== 'undefined' ? sessionStorage.getItem('googleOAuthFlow') : null,
+        justSignedUp: typeof window !== 'undefined' ? sessionStorage.getItem('justSignedUp') : null,
+        isSignupFlow,
+        userId: user.id,
+        userEmail: user.email
+      })
+      
+      if (isSignupFlow) {
+        console.log('🚫 HomePage: User just signed up, not checking profile yet')
+        setProfileLoading(false)
+        return
+      }
+
+      // Additional check: if user was just created (no profile data yet), don't show stepper immediately
+      // This prevents the stepper from showing right after signup
+      const userCreatedRecently = user.created_at && 
+        (new Date().getTime() - new Date(user.created_at).getTime()) < 30000 // 30 seconds
+      
+      if (userCreatedRecently && (typeof window === 'undefined' || !sessionStorage.getItem('hasSignedIn'))) {
+        console.log('🚫 HomePage: User created recently and hasn\'t signed in yet, not checking profile')
+        setProfileLoading(false)
+        return
+      }
+
+      // Add a small delay to ensure user is fully authenticated after signup
+      if (retryCount === 0) {
+        console.log('⏳ HomePage: Waiting for user authentication to complete...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+
       try {
         console.log('🔄 HomePage: Fetching profile for user:', user.id, retryCount > 0 ? `(retry ${retryCount})` : '')
         console.log('🔄 HomePage: User object:', {
@@ -294,6 +335,7 @@ function HomePageContent() {
           // Don't throw the error, handle it gracefully
           console.log('🔄 HomePage: Handling fetch error gracefully after retries failed...')
           setUserProfile(null)
+          setProfileLoading(false)
           return
         }
         
@@ -568,7 +610,19 @@ function HomePageContent() {
       }
     }
 
+    const handleTriggerProfileCheck = () => {
+      console.log('🔄 HomePage: Trigger profile check event received')
+      checkProfileCompletion()
+    }
+
+    // Listen for trigger events
+    window.addEventListener('triggerProfileCheck', handleTriggerProfileCheck)
+    
     checkProfileCompletion()
+    
+    return () => {
+      window.removeEventListener('triggerProfileCheck', handleTriggerProfileCheck)
+    }
   }, [user])
 
   const handleProfileComplete = () => {
@@ -630,9 +684,17 @@ function HomePageContent() {
       }
     }
 
+    const handleUserSignedIn = () => {
+      console.log('🔄 HomePage: User signed in event received, triggering profile check...')
+      // Trigger profile check after sign-in by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('triggerProfileCheck'))
+    }
+
     window.addEventListener('profileUpdated', handleProfileUpdate)
+    window.addEventListener('userSignedIn', handleUserSignedIn)
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate)
+      window.removeEventListener('userSignedIn', handleUserSignedIn)
     }
   }, [user?.id])
 

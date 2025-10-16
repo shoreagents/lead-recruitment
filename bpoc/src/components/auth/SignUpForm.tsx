@@ -34,7 +34,7 @@ interface SignUpFormProps {
 }
 
 export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: SignUpFormProps) {
-  const { signUp, signInWithGoogle } = useAuth()
+  const { signUp, signInWithGoogle, signOut } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -42,6 +42,14 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
     password: '',
     confirmPassword: ''
   })
+
+  // Set signup flag when component mounts to prevent immediate stepper modal
+  useEffect(() => {
+    if (open) {
+      console.log('🚫 SignUpForm: Setting justSignedUp flag to prevent stepper modal')
+      sessionStorage.setItem('justSignedUp', 'true')
+    }
+  }, [open])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -49,9 +57,17 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
   const [termsLocked, setTermsLocked] = useState(false)
   const [hasReadTerms, setHasReadTerms] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [successMessage, setSuccessMessage] = useState('')
   const [showTermsContent, setShowTermsContent] = useState(false)
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false)
+
+  // Set signup flag when modal opens
+  useEffect(() => {
+    if (open) {
+      sessionStorage.setItem('justSignedUp', 'true')
+      sessionStorage.removeItem('hasSignedIn')
+      console.log('🚫 SignUpForm: Set justSignedUp flag when modal opened')
+    }
+  }, [open])
 
   // Check if terms were accepted from the terms page
   useEffect(() => {
@@ -176,7 +192,6 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrors({})
-    setSuccessMessage('')
     
     const validationErrors = validateForm()
     if (Object.keys(validationErrors).length > 0) {
@@ -257,7 +272,28 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
 
         // Successful registration
         console.log('Registration successful:', data.user.email)
-        setSuccessMessage('Account created successfully! You can now sign in.')
+        
+        // Set flag to indicate user just signed up (not signed in yet)
+        sessionStorage.setItem('justSignedUp', 'true')
+        sessionStorage.removeItem('googleOAuthFlow')
+        sessionStorage.removeItem('hasSignedIn')
+        
+        // Sign out the user so they need to sign in manually
+        try {
+          const signOutResult = await signOut()
+          if (signOutResult?.error) {
+            console.error('Error signing out after registration:', signOutResult.error)
+          } else {
+            console.log('✅ User signed out after registration, must sign in manually')
+          }
+        } catch (signOutError) {
+          console.error('Error during sign out after registration:', signOutError)
+        }
+        
+        // Close the signup modal
+        onOpenChange(false)
+        
+        // Don't dispatch userSignedIn event - user needs to sign in manually
       }
     } catch (error) {
       console.error('Registration error:', error)
@@ -316,7 +352,6 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
     setHasReadTerms(false)
     setTermsLocked(false)
     setErrors({})
-    setSuccessMessage('')
     setIsLoading(false)
     
     // Clear session storage
@@ -369,16 +404,6 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
               </DialogDescription>
             </DialogHeader>
 
-            {/* Success Message */}
-            {successMessage && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-500/10 border border-green-500/20 rounded-lg p-4"
-              >
-                <p className="text-green-400 text-sm text-center">{successMessage}</p>
-              </motion.div>
-            )}
 
             {/* General Error Display */}
             {errors.general && (

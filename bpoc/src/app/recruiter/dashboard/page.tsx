@@ -237,15 +237,34 @@ export default function RecruiterDashboardPage() {
 
   // Refresh functions for both cards
   const refreshApplications = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
-      const response = await fetch('/api/recruiter/recent-applications');
+      console.log('🔄 Refreshing applications for user:', user.id);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      
+      const response = await fetch('/api/recruiter/recent-applications', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Applications refreshed:', data.recent_activity?.length || 0);
         setRecentActivity(data.recent_activity || []);
+      } else {
+        console.error('❌ Failed to refresh applications:', response.status);
+        setRecentActivity([]);
       }
     } catch (error) {
       console.error('Error refreshing applications:', error);
+      setRecentActivity([]);
     } finally {
       setLoading(false);
     }
@@ -261,7 +280,7 @@ export default function RecruiterDashboardPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       
-      const activitiesResponse = await fetch('/api/recruiter/activity', {
+      const activitiesResponse = await fetch('/api/recruiter/activity-fallback', {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': user.id,
@@ -345,15 +364,30 @@ export default function RecruiterDashboardPage() {
           console.error('Error fetching recruiter jobs:', error);
         }
 
-        // Fetch recent recruiter applications
-        try {
-          const activityResponse = await fetch('/api/recruiter/recent-applications');
-          if (activityResponse.ok) {
-            const activityData = await activityResponse.json();
-            setRecentActivity(activityData.recent_activity || []);
+        // Fetch recent recruiter applications (only for this recruiter's jobs)
+        if (user?.id) {
+          try {
+            console.log('🔍 Fetching applications for user:', user.id);
+            const activityResponse = await fetch('/api/recruiter/recent-applications', {
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.id,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+            });
+            
+            if (activityResponse.ok) {
+              const activityData = await activityResponse.json();
+              console.log('✅ Applications fetched:', activityData.recent_activity?.length || 0);
+              setRecentActivity(activityData.recent_activity || []);
+            } else {
+              console.error('❌ Failed to fetch applications:', activityResponse.status);
+              setRecentActivity([]);
+            }
+          } catch (error) {
+            console.error('Error fetching recent recruiter applications:', error);
+            setRecentActivity([]);
           }
-        } catch (error) {
-          console.error('Error fetching recent recruiter applications:', error);
         }
 
         // Fetch application trends for this recruiter
@@ -378,7 +412,7 @@ export default function RecruiterDashboardPage() {
             console.log('🔍 User ID being sent:', user.id);
             console.log('🔍 Access token available:', !!token);
             
-            const activitiesResponse = await fetch('/api/recruiter/activity', {
+            const activitiesResponse = await fetch('/api/recruiter/activity-fallback', {
               headers: {
                 'Content-Type': 'application/json',
                 'x-user-id': user.id,
