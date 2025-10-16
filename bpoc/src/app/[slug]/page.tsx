@@ -3668,10 +3668,10 @@ export default function ProfilePage() {
                                         .replace(/^[^:]*:\s*/, '') // Remove everything before the first colon
                                         .trim();
                                       
-                                      // Split by bullet points and display each as a separate line
-                                      // Use more specific regex to avoid splitting on hyphens within words
+                                      // Split by numbered items or bullet points and display each as a separate line
+                                      // Handle both numbered format (1. 2. 3.) and bullet points (- • *)
                                       const bulletPoints = cleanCultural
-                                        .split(/(?<=^|\n)\s*[-•*]\s+/)
+                                        .split(/(?<=^|\n)\s*(?:\d+\.\s*|[-•*]\s+)/)
                                         .map((point: string) => point.trim())
                                         .filter((point: string) => point.length > 0);
                                       
