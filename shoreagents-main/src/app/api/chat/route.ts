@@ -17,13 +17,46 @@ function analyzeConversation(message: string, conversationHistory: Array<{ role:
   if (!message || message.trim() === '') {
     intent = 'greeting';
   }
+  // Detect candidate analysis requests (PRIORITY - check this first)
+  // Simple detection: if asking about someone by name
+  else if (
+    (messageLower.includes('who is') || messageLower.includes('who are') ||
+     messageLower.includes('tell me about') || messageLower.includes('what about') || 
+     messageLower.includes('tell me more about') || messageLower.includes('information about') ||
+     messageLower.includes('ask about') || messageLower.includes('know about') ||
+     messageLower.includes('analyze') || messageLower.includes('evaluate') ||
+     messageLower.includes('review') || messageLower.includes('assess')) &&
+    // Check if message contains any capitalized words (potential names)
+    message.match(/[A-Z][a-z]+/)
+  ) {
+    console.log('🔍 Candidate analysis detected for message:', message);
+    intent = 'candidate_analysis';
+  }
+  // Questions after seeing candidates
+  else if (
+    (messageLower.includes('can i ask') || messageLower.includes('question about') ||
+     messageLower.includes('curious about') || messageLower.includes('interested in')) &&
+    (messageLower.includes('candidate') || messageLower.includes('them') || messageLower.includes('this person'))
+  ) {
+    intent = 'candidate_analysis';
+  }
+  // Context-based: if user just saw candidates and is asking questions
+  else if (
+    fullConversation.includes('recommended candidates') &&
+    (messageLower.includes('about') || messageLower.includes('ask') || 
+     messageLower.includes('know') || messageLower.includes('tell'))
+  ) {
+    intent = 'candidate_analysis';
+  }
   // Only detect specific business intents for clear requests
   else if (messageLower.includes('pricing') || messageLower.includes('cost') || messageLower.includes('price') || messageLower.includes('quote')) {
     intent = 'pricing_inquiry';
   } else if (messageLower.includes('talent') || messageLower.includes('hire') || messageLower.includes('team') || messageLower.includes('staff')) {
-    // Only if it's a clear business request, not just casual mention
-    if (messageLower.includes('need') || messageLower.includes('want') || messageLower.includes('looking for') || 
-        messageLower.includes('build') || messageLower.includes('find') || messageLower.includes('get')) {
+    // Only if it's a clear business request, not just casual mention or question about existing candidates
+    if ((messageLower.includes('need') || messageLower.includes('want') || messageLower.includes('looking for') || 
+        messageLower.includes('build') || messageLower.includes('find') || messageLower.includes('get')) &&
+        !messageLower.includes('ask about') && !messageLower.includes('tell me about') &&
+        !messageLower.includes('can i ask')) {
       intent = 'talent_inquiry';
     }
   } else if (messageLower.includes('service') || messageLower.includes('help') || messageLower.includes('support')) {
@@ -48,6 +81,7 @@ function analyzeConversation(message: string, conversationHistory: Array<{ role:
   
   // Extract key topics
   const topics = [];
+  if (fullConversation.includes('candidate') || fullConversation.includes('applicant')) topics.push('candidate_analysis');
   if (fullConversation.includes('real estate')) topics.push('real_estate');
   if (fullConversation.includes('construction')) topics.push('construction');
   if (fullConversation.includes('engineering')) topics.push('engineering');
@@ -601,15 +635,101 @@ CONVERSATION ANALYSIS:
     }
   }
 
+  // Check if this is a candidate analysis request
+  let candidateAnalysis = null;
+  if (conversationAnalysis.intent === 'candidate_analysis') {
+    try {
+      console.log('🔍 Detected candidate analysis request, fetching candidate data...');
+      
+      // Extract candidate name from the message - improved pattern matching
+      let candidateName = null;
+      
+      // Try different patterns to extract names
+      const patterns = [
+        /(?:tell me about|what about|analyze|review|assess)\s+([^?]+)/i,
+        /(?:who is|who are)\s+([^?]+)/i,
+        /(?:about|regarding)\s+([^?]+)/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = message.match(pattern);
+        if (match) {
+          candidateName = match[1].trim();
+          break;
+        }
+      }
+      
+      // If no pattern match, try to extract capitalized words (potential names)
+      if (!candidateName) {
+        const capitalizedWords = message.match(/[A-Z][a-z]+/g);
+        if (capitalizedWords && capitalizedWords.length > 0) {
+          candidateName = capitalizedWords.join(' ');
+        }
+      }
+      
+      if (candidateName) {
+        console.log('🔍 Looking for candidate:', candidateName);
+        
+        // Call the candidate analysis API
+        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/api/analyze-candidate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            candidateName: candidateName,
+            question: message
+          }),
+        });
+        
+        if (analysisResponse.ok) {
+          candidateAnalysis = await analysisResponse.json();
+          console.log('✅ Candidate analysis retrieved:', candidateAnalysis.candidate?.name);
+        } else {
+          console.log('⚠️ Candidate analysis failed:', analysisResponse.status);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching candidate analysis:', error);
+    }
+  }
+
   // Create system prompt using dynamic configuration
   const knowledgeContext = allRelevantKnowledge.length > 0 
     ? allRelevantKnowledge.map(item => `- ${item.title}: ${item.content}`).join('\n')
     : '';
 
   // Use simplified AI config to avoid hardcoded responses
-  const systemPrompt = userData && userData.user 
+  let systemPrompt = userData && userData.user 
     ? SIMPLIFIED_AI_CONFIG.systemPrompts.withPersonalization(userData)
     : SIMPLIFIED_AI_CONFIG.systemPrompts.base;
+
+  // Add candidate analysis data to system prompt if available
+  if (candidateAnalysis && candidateAnalysis.success) {
+    systemPrompt += `
+
+CANDIDATE ANALYSIS DATA:
+You MUST use ONLY the real candidate data provided below from the BPOC database. DO NOT make up or invent ANY information.
+
+ACTUAL DATA FROM DATABASE:
+- CANDIDATE NAME: ${candidateAnalysis.candidate.name}
+- POSITION: ${candidateAnalysis.candidate.position || 'Not specified'}
+- LOCATION: ${candidateAnalysis.candidate.location || 'Not specified'}
+- EXPECTED SALARY: ${candidateAnalysis.candidate.expectedSalary || 'Not specified'}
+- OVERALL SCORE: ${candidateAnalysis.candidate.overallScore || 0}
+- SKILLS: ${candidateAnalysis.candidate.skills.length > 0 ? candidateAnalysis.candidate.skills.join(', ') : 'No skills listed'}
+- EXPERIENCE COUNT: ${candidateAnalysis.candidate.experienceCount} positions
+
+PROFESSIONAL ANALYSIS:
+${candidateAnalysis.analysis}
+
+CRITICAL INSTRUCTIONS:
+1. Use ONLY the information provided above - DO NOT invent or assume any details
+2. If information is missing (like skills or experience), explicitly state "This information is not available in their profile"
+3. DO NOT make up years of experience, skills, or qualifications that are not listed above
+4. Be honest about gaps in the candidate's profile
+5. Base your assessment ONLY on the actual data provided above`;
+  }
 
     // Log request details (without sensitive information)
     console.log('Processing chat request...');

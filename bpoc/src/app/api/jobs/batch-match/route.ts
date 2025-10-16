@@ -196,19 +196,33 @@ export async function POST(request: NextRequest) {
             reasoning: matchScore.reasoning ?? '',
             breakdown: matchScore.breakdown ?? {},
             cached: false
-          }));
+          })).catch(error => {
+            console.error(`Error analyzing job ${job.id}:`, error);
+            // Return failure indicator for this specific job
+            return {
+              jobId: job.id,
+              score: null,
+              reasoning: 'Failed to analyze - AI analysis unavailable',
+              breakdown: {},
+              cached: false,
+              failed: true,
+              error: true
+            };
+          });
         });
 
         const analysisResults = await Promise.all(analysisPromises);
 
-        // Cache the new results
+        // Cache the new results (only cache successful analyses)
         for (const result of analysisResults) {
-          await client.query(`
-            INSERT INTO job_match_results (user_id, job_id, score, reasoning, breakdown, analyzed_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            ON CONFLICT (user_id, job_id)
-            DO UPDATE SET score = EXCLUDED.score, reasoning = EXCLUDED.reasoning, breakdown = EXCLUDED.breakdown, analyzed_at = NOW()
-          `, [userId, result.jobId, result.score, result.reasoning, JSON.stringify(result.breakdown)]);
+          if (result.score !== null && !result.failed) {
+            await client.query(`
+              INSERT INTO job_match_results (user_id, job_id, score, reasoning, breakdown, analyzed_at)
+              VALUES ($1, $2, $3, $4, $5, NOW())
+              ON CONFLICT (user_id, job_id)
+              DO UPDATE SET score = EXCLUDED.score, reasoning = EXCLUDED.reasoning, breakdown = EXCLUDED.breakdown, analyzed_at = NOW()
+            `, [userId, result.jobId, result.score, result.reasoning, JSON.stringify(result.breakdown)]);
+          }
 
           results[result.jobId] = result;
         }
@@ -409,6 +423,12 @@ SCORING GUIDELINES:
           .replace(/\s+/g, ' ') // Replace multiple spaces with single space
           .trim();
 
+        // Try to fix common JSON issues
+        jsonStr = jsonStr
+          .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+          .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Add quotes around unquoted keys
+          .replace(/:\s*([^",{\[\s][^,}]*?)(\s*[,}])/g, ': "$1"$2'); // Add quotes around unquoted string values
+
         const parsed = JSON.parse(jsonStr);
         
         // Validate the response structure
@@ -451,12 +471,79 @@ SCORING GUIDELINES:
       } catch (parseError) {
         console.error('JSON parsing error:', parseError);
         console.error('Raw content:', content);
-        throw new Error('Failed to parse AI response');
+        console.error('Cleaned JSON string:', jsonStr);
+        
+        // Try to extract a score from the content even if JSON parsing fails
+        const scoreMatch = content.match(/(?:score|match|rating)[:\s]*(\d+)/i);
+        const extractedScore = scoreMatch ? parseInt(scoreMatch[1]) : null;
+        
+        if (extractedScore !== null) {
+          console.log('Extracted fallback score:', extractedScore);
+          
+          return {
+            score: Math.min(100, Math.max(0, extractedScore)),
+            reasoning: 'Analysis completed with extracted scoring',
+            breakdown: {
+              skillsMatch: extractedScore,
+              experienceMatch: extractedScore,
+              careerMatch: extractedScore,
+              salaryMatch: extractedScore,
+              workSetupMatch: extractedScore,
+              locationMatch: extractedScore,
+              industryMatch: extractedScore,
+              shiftMatch: extractedScore,
+              culturalMatch: extractedScore
+            }
+          };
+        } else {
+          console.log('No score found in content, marking as failed');
+          
+          return {
+            score: null,
+            reasoning: 'Failed to analyze - Unable to parse AI response',
+            breakdown: {},
+            failed: true,
+            error: true
+          };
+        }
       }
     } else {
       console.error('No JSON found in response');
       console.error('Raw content:', content);
-      throw new Error('No valid JSON found in AI response');
+      
+      // Try to extract a score from the content even if no JSON is found
+      const scoreMatch = content.match(/(?:score|match|rating)[:\s]*(\d+)/i);
+      const extractedScore = scoreMatch ? parseInt(scoreMatch[1]) : null;
+      
+      if (extractedScore !== null) {
+        console.log('Extracted fallback score from non-JSON content:', extractedScore);
+        
+        return {
+          score: Math.min(100, Math.max(0, extractedScore)),
+          reasoning: 'Analysis completed with extracted scoring (no JSON found)',
+          breakdown: {
+            skillsMatch: extractedScore,
+            experienceMatch: extractedScore,
+            careerMatch: extractedScore,
+            salaryMatch: extractedScore,
+            workSetupMatch: extractedScore,
+            locationMatch: extractedScore,
+            industryMatch: extractedScore,
+            shiftMatch: extractedScore,
+            culturalMatch: extractedScore
+          }
+        };
+      } else {
+        console.log('No score found in non-JSON content, marking as failed');
+        
+        return {
+          score: null,
+          reasoning: 'Failed to analyze - No valid response format found',
+          breakdown: {},
+          failed: true,
+          error: true
+        };
+      }
     }
   } catch (error) {
     console.error('Error in analyzeJobMatchWithAI:', error);

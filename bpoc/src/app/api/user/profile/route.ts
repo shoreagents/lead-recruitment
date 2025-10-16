@@ -293,13 +293,33 @@ export async function PUT(request: NextRequest) {
     if (updateData.position !== undefined) {
       try {
         console.log('🔄 Syncing position to work status table:', updateData.position)
-        await pool.query(
-          `UPDATE user_work_status SET current_position = $1, updated_at = NOW() WHERE user_id = $2`,
-          [position, userId]
+        
+        // First check if user_work_status record exists
+        const checkResult = await pool.query(
+          'SELECT user_id FROM user_work_status WHERE user_id = $1',
+          [userId]
         )
-        console.log('✅ Position synced to work status table')
+        
+        if (checkResult.rows.length === 0) {
+          console.log('⚠️ No user_work_status record found, creating one...')
+          // Create a new work status record with the position
+          await pool.query(
+            `INSERT INTO user_work_status (user_id, current_position, created_at, updated_at) 
+             VALUES ($1, $2, NOW(), NOW())`,
+            [userId, updateData.position]
+          )
+          console.log('✅ New user_work_status record created with position')
+        } else {
+          // Update existing record
+          const updateResult = await pool.query(
+            `UPDATE user_work_status SET current_position = $1, updated_at = NOW() WHERE user_id = $2`,
+            [updateData.position, userId]
+          )
+          console.log('✅ Position synced to work status table, rows affected:', updateResult.rowCount)
+        }
       } catch (error) {
-        console.log('⚠️ Failed to sync position to work status (non-fatal):', error instanceof Error ? error.message : String(error))
+        console.log('❌ Failed to sync position to work status:', error instanceof Error ? error.message : String(error))
+        console.log('❌ Full error details:', error)
       }
     }
 

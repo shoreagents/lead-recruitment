@@ -11,28 +11,66 @@ import {
 } from '@/types/api';
 import { BPOCUser, BPOCApiResponse } from './bpocApiService';
 
-const API_BASE_URL = 'https://www.bpoc.io/api/public';
-
-// Updated to use the single user-data endpoint
+// Updated to use the local BPOC database API route
 export async function fetchAllUserData(): Promise<BPOCUser[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/user-data`);
+    console.log('🔍 Fetching user data from local BPOC API...');
+    
+    const response = await fetch('/api/bpoc-users', {
+      cache: 'no-store' // Always get fresh data
+    });
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data: BPOCApiResponse = await response.json();
+    const result = await response.json();
     
-    if (!data.success) {
+    if (!result.success) {
       throw new Error('API returned unsuccessful response');
     }
     
-    console.log('✅ Fetched all user data:', data.data.length, 'users');
-    console.log('📊 Sample user data:', data.data[0]);
-    return data.data;
+    const users = result.data;
+    
+    // Convert BPOCDatabaseUser to BPOCUser format for compatibility
+    const convertedUsers: BPOCUser[] = users.map((user: any) => ({
+      user_id: user.user_id,
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      full_name: user.full_name,
+      email: '', // Not available in database
+      location: user.location || '',
+      avatar_url: user.avatar_url,
+      bio: user.bio,
+      position: user.position || '',
+      current_position: user.current_position || '',
+      expected_salary: user.expected_salary || '',
+      work_status: user.work_status || '',
+      work_status_completed: user.work_status_completed || false,
+      user_created_at: user.user_created_at || '',
+      user_updated_at: '', // Not available in database
+      analysis_id: null, // Not in database structure
+      overall_score: user.overall_score || 0,
+      ats_compatibility_score: 0, // Not in database
+      content_quality_score: 0, // Not in database
+      professional_presentation_score: 0, // Not in database
+      skills_alignment_score: 0, // Not in database
+      key_strengths: user.key_strengths || [],
+      improvements: user.improvements || [],
+      recommendations: user.recommendations || [],
+      improved_summary: user.improved_summary || '',
+      strengths_analysis: user.strengths_analysis || {},
+      candidate_profile: user.candidate_profile || {},
+      analysis_created_at: '', // Not in database
+      analysis_updated_at: '', // Not in database
+      skills_snapshot: user.skills_snapshot || [],
+      experience_snapshot: user.experience_snapshot || []
+    }));
+    
+    console.log('✅ Fetched all user data from API:', convertedUsers.length, 'users');
+    return convertedUsers;
   } catch (error) {
-    console.error('❌ Error fetching user data:', error);
+    console.error('❌ Error fetching user data from API:', error);
     return [];
   }
 }

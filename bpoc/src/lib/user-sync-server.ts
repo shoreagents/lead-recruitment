@@ -1,4 +1,5 @@
 import pool from '@/lib/database'
+import { capitalizeNames, capitalizeFullName } from '@/lib/name-utils'
 
 interface UserData {
   id: string
@@ -22,6 +23,10 @@ export async function syncUserToDatabaseServer(userData: UserData) {
   const client = await pool.connect()
   
   try {
+    // Capitalize names before processing
+    const capitalizedNames = capitalizeNames(userData.first_name, userData.last_name);
+    const capitalizedFullName = capitalizeFullName(userData.full_name);
+    
     console.log('🔄 Starting server-side user sync for:', userData.email)
     console.log('🔍 User data received:', {
       id: userData.id,
@@ -30,6 +35,11 @@ export async function syncUserToDatabaseServer(userData: UserData) {
       last_name: userData.last_name,
       full_name: userData.full_name,
       admin_level: userData.admin_level
+    })
+    console.log('📝 Capitalized names:', {
+      first_name: capitalizedNames.firstName,
+      last_name: capitalizedNames.lastName,
+      full_name: capitalizedFullName
     })
     
     // Check if user already exists
@@ -77,9 +87,9 @@ export async function syncUserToDatabaseServer(userData: UserData) {
       const updateResult = await client.query(updateQuery, [
         userData.id,
         userData.email,
-        userData.first_name,
-        userData.last_name,
-        userData.full_name,
+        capitalizedNames.firstName,
+        capitalizedNames.lastName,
+        capitalizedFullName,
         userData.location,
         userData.avatar_url,
         userData.phone,
@@ -125,9 +135,9 @@ export async function syncUserToDatabaseServer(userData: UserData) {
       const insertResult = await client.query(insertQuery, [
         userData.id,
         userData.email,
-        userData.first_name,
-        userData.last_name,
-        userData.full_name,
+        capitalizedNames.firstName,
+        capitalizedNames.lastName,
+        capitalizedFullName,
         userData.location,
         userData.avatar_url,
         userData.phone,

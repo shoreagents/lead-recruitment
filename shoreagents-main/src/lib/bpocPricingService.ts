@@ -11,6 +11,7 @@ export interface CandidateRecommendation {
   overallScore: number
   matchScore: number
   isRecommended: boolean
+  avatar?: string | null
 }
 
 export interface JobPositionMatch {
@@ -54,54 +55,42 @@ function parseSalary(salaryString: string | null): number {
 function determineExperienceLevel(user: BPOCUser): 'entry' | 'mid' | 'senior' {
   console.log(`🔍 Determining experience level for ${user.full_name}:`, {
     position: user.current_position || user.position,
-    overallScore: user.overall_score,
-    experienceSnapshot: user.experience_snapshot?.length || 0
+    experienceCount: user.experience_snapshot?.length || 0,
+    overallScore: user.overall_score
   })
   
-  // Check if there's explicit experience data
+  // Use experience snapshot length as primary indicator
   if (user.experience_snapshot && Array.isArray(user.experience_snapshot)) {
-    const totalExperience = user.experience_snapshot.reduce((total, exp) => {
-      if (exp.duration && typeof exp.duration === 'string') {
-        // Parse duration (e.g., "2 years", "6 months")
-        const years = exp.duration.match(/(\d+)\s*year/i)
-        const months = exp.duration.match(/(\d+)\s*month/i)
-        if (years) return total + parseInt(years[1])
-        if (months) return total + parseInt(months[1]) / 12
-      }
-      return total
-    }, 0)
+    const experienceCount = user.experience_snapshot.length
     
-    console.log(`📊 Total experience calculated: ${totalExperience} years`)
+    if (experienceCount >= 5) {
+      console.log(`✅ Classified as SENIOR: ${experienceCount} positions`)
+      return 'senior'
+    }
     
-    if (totalExperience >= 5) return 'senior'
-    if (totalExperience >= 2) return 'mid'
+    if (experienceCount >= 2) {
+      console.log(`✅ Classified as MID: ${experienceCount} positions`)
+      return 'mid'
+    }
+    
+    console.log(`✅ Classified as ENTRY: ${experienceCount} positions`)
     return 'entry'
   }
   
-  // Fallback: use overall score and position to determine level
-  if (user.overall_score) {
-    console.log(`📊 Using overall score: ${user.overall_score}`)
-    if (user.overall_score >= 85) return 'senior'
-    if (user.overall_score >= 70) return 'mid'
-  }
+  // Fallback to position title analysis
+  const position = (user.current_position || user.position || '').toLowerCase()
   
-  // Check position title for seniority indicators
-  const position = user.current_position || user.position || ''
-  const lowerPosition = position.toLowerCase()
-  
-  console.log(`📊 Analyzing position title: "${position}"`)
-  
-  if (lowerPosition.includes('senior') || lowerPosition.includes('lead') || lowerPosition.includes('manager') || 
-      lowerPosition.includes('director') || lowerPosition.includes('head') || lowerPosition.includes('chief')) {
-    console.log(`✅ Determined as SENIOR based on position title`)
+  if (position.includes('senior') || position.includes('lead') || position.includes('manager') || position.includes('director')) {
+    console.log(`✅ Classified as SENIOR based on position: ${position}`)
     return 'senior'
   }
-  if (lowerPosition.includes('junior') || lowerPosition.includes('associate') || lowerPosition.includes('entry') ||
-      lowerPosition.includes('trainee') || lowerPosition.includes('intern')) {
-    console.log(`✅ Determined as ENTRY based on position title`)
+  
+  if (position.includes('junior') || position.includes('entry') || position.includes('assistant') || position.includes('intern')) {
+    console.log(`✅ Classified as ENTRY based on position: ${position}`)
     return 'entry'
   }
   
+  // Default to mid-level for unknown positions
   console.log(`✅ Defaulting to MID level`)
   return 'mid' // Default to mid-level
 }
@@ -111,46 +100,15 @@ function calculateMatchScore(candidatePosition: string, targetRole: string): num
   const candidate = candidatePosition.toLowerCase().trim()
   const target = targetRole.toLowerCase().trim()
   
-  console.log(`🎯 Calculating match score: "${candidate}" vs "${target}"`)
+  console.log(`🔍 Calculating match score: "${candidate}" vs "${target}"`)
   
-  // Exact match
+  // Direct match
   if (candidate === target || candidate.includes(target) || target.includes(candidate)) {
-    console.log(`✅ Exact match found: 100%`)
+    console.log(`✅ Direct match found: 100%`)
     return 100
   }
   
-  // Common role mappings with more specific matching and similar positions
-  const roleMappings: Record<string, string[]> = {
-    'developer': ['programmer', 'engineer', 'coder', 'software developer', 'web developer', 'frontend developer', 'backend developer', 'full stack developer', 'mobile developer', 'devops engineer', 'software engineer', 'application developer'],
-    'designer': ['graphic designer', 'ui designer', 'ux designer', 'visual designer', 'web designer', 'product designer', 'interaction designer', 'creative designer', 'brand designer'],
-    'writer': ['content writer', 'copywriter', 'content creator', 'blogger', 'technical writer', 'content strategist', 'content manager', 'editor', 'journalist'],
-    'marketing': ['marketing specialist', 'digital marketing', 'social media', 'seo', 'marketing coordinator', 'marketing manager', 'brand manager', 'growth hacker', 'marketing analyst'],
-    'sales': ['sales representative', 'account manager', 'business development', 'sales executive', 'sales coordinator', 'sales development representative', 'sdr', 'inside sales', 'outside sales', 'sales consultant', 'territory manager'],
-    'support': ['customer support', 'help desk', 'technical support', 'customer service', 'support specialist', 'client success', 'customer success', 'support engineer'],
-    'admin': ['administrative assistant', 'office manager', 'executive assistant', 'admin assistant', 'administrative coordinator', 'office coordinator', 'personal assistant'],
-    'accounting': ['bookkeeper', 'accountant', 'financial analyst', 'finance', 'accounting assistant', 'financial controller', 'auditor', 'tax specialist'],
-    'hr': ['human resources', 'recruiter', 'talent acquisition', 'hr specialist', 'hr coordinator', 'people operations', 'talent manager'],
-    'project': ['project manager', 'project coordinator', 'scrum master', 'project lead', 'program manager', 'product manager', 'delivery manager'],
-    'nurse': ['registered nurse', 'rn', 'nursing', 'healthcare', 'medical', 'patient care', 'clinical', 'nurse practitioner', 'lpn', 'licensed practical nurse', 'cna', 'certified nursing assistant', 'healthcare worker', 'medical assistant', 'healthcare assistant'],
-    'healthcare': ['nurse', 'registered nurse', 'rn', 'nursing', 'medical', 'patient care', 'clinical', 'nurse practitioner', 'lpn', 'licensed practical nurse', 'cna', 'certified nursing assistant', 'healthcare worker', 'medical assistant', 'healthcare assistant', 'doctor', 'physician', 'therapist', 'pharmacist', 'healthcare professional'],
-    'medical': ['nurse', 'registered nurse', 'rn', 'nursing', 'healthcare', 'patient care', 'clinical', 'nurse practitioner', 'lpn', 'licensed practical nurse', 'cna', 'certified nursing assistant', 'healthcare worker', 'medical assistant', 'healthcare assistant', 'doctor', 'physician', 'therapist', 'pharmacist', 'healthcare professional', 'medical professional'],
-    'care': ['nurse', 'registered nurse', 'rn', 'nursing', 'healthcare', 'medical', 'patient care', 'clinical', 'nurse practitioner', 'lpn', 'licensed practical nurse', 'cna', 'certified nursing assistant', 'healthcare worker', 'medical assistant', 'healthcare assistant', 'caregiver', 'care worker', 'patient care specialist']
-  }
-  
-  // Check for role category matches - more strict matching
-  for (const [category, keywords] of Object.entries(roleMappings)) {
-    if (target.includes(category)) {
-      console.log(`🔍 Checking category "${category}" for target "${target}"`)
-      for (const keyword of keywords) {
-        if (candidate.includes(keyword)) {
-          console.log(`✅ Category match found: "${keyword}" in "${candidate}" - 85%`)
-          return 85
-        }
-      }
-    }
-  }
-  
-  // Check for partial word matches (more strict)
+  // Word-based matching
   const targetWords = target.split(' ').filter(word => word.length > 2)
   const candidateWords = candidate.split(' ').filter(word => word.length > 2)
   
@@ -160,19 +118,8 @@ function calculateMatchScore(candidatePosition: string, targetRole: string): num
   
   if (matchingWords.length > 0) {
     const matchPercentage = (matchingWords.length / targetWords.length) * 70
-    console.log(`✅ Partial word match: ${matchingWords.join(', ')} - ${Math.round(matchPercentage)}%`)
+    console.log(`✅ Word-based match: ${matchPercentage}%`)
     return Math.round(matchPercentage)
-  }
-  
-  // Check for completely unrelated roles - return very low score
-  const unrelatedRoles = ['developer', 'designer', 'engineer', 'programmer', 'coder']
-  const isUnrelated = unrelatedRoles.some(role => 
-    candidate.includes(role) && !target.includes(role)
-  )
-  
-  if (isUnrelated) {
-    console.log(`❌ Unrelated role detected: "${candidate}" vs "${target}" - 10%`)
-    return 10
   }
   
   console.log(`⚠️ No significant match found: "${candidate}" vs "${target}" - 20%`)
@@ -188,189 +135,38 @@ export async function getCandidateRecommendations(
   try {
     console.log(`🔍 BPOC Service: Searching for ${role} (${level} level) in industry: ${industry || 'any'}`);
     
-    let bpocEmployees: BPOCUser[] = []
-    try {
-      bpocEmployees = await fetchBPOCEmployeeData()
-      console.log(`📋 BPOC Service: Fetched ${bpocEmployees.length} total employees from BPOC`);
-      
-      if (bpocEmployees.length === 0) {
-        console.warn('⚠️ BPOC API returned empty data, this might be a network issue');
-        throw new Error('No BPOC data available');
-      }
-    } catch (bpocError) {
-      console.warn('⚠️ BPOC API unavailable, using empty candidate list:', bpocError)
-      bpocEmployees = []
-    }
-    
-    // Filter active employees with expected salary and exclude mock/test data
-    const activeCandidates = bpocEmployees.filter(emp => {
-      // Basic filters
-      if (emp.work_status_completed !== true) return false
-      if (!emp.expected_salary || emp.expected_salary.trim() === '') return false
-      
-      // Exclude mock/test data
-      const name = emp.full_name?.toLowerCase() || ''
-      const position = (emp.current_position || emp.position || '').toLowerCase()
-      
-      // Skip obvious test/mock entries
-      if (name.includes('shoreagents') || 
-          name.includes('test') || 
-          name.includes('mock') ||
-          position.includes('robber') ||
-          position.includes('test') ||
-          position.includes('mock')) {
-        console.log(`🚫 Excluding mock/test data: ${emp.full_name} - ${position}`)
-        return false
-      }
-      
-      // Validate salary is reasonable
-      const salary = parseSalary(emp.expected_salary)
-      if (salary === 0) {
-        console.log(`🚫 Excluding candidate with invalid salary: ${emp.full_name} - ${emp.expected_salary}`)
-        return false
-      }
-      
-      return true
-    })
-    
-    console.log(`✅ BPOC Service: Found ${activeCandidates.length} active candidates with salary data`);
-    
-    // Calculate match scores and filter by experience level
-    const candidatesWithScores = activeCandidates
-      .map(candidate => {
-        const candidateLevel = determineExperienceLevel(candidate)
-        const matchScore = calculateMatchScore(
-          candidate.current_position || candidate.position || '', 
-          role
-        )
-        
-        console.log(`🔍 Candidate: ${candidate.full_name}`, {
-          position: candidate.current_position || candidate.position,
-          candidateLevel,
-          requestedLevel: level,
-          matchScore,
-          overallScore: candidate.overall_score,
-          levelMatch: candidateLevel === level
-        })
-        
-        // More flexible inclusion criteria for similar positions
-        const levelMatches = candidateLevel === level
-        const highMatchScore = matchScore >= 50 // Lower threshold for similar positions
-        const similarPosition = matchScore >= 30 // Include candidates with similar positions
-        
-        // Only exclude completely unrelated roles
-        const isCompletelyUnrelated = matchScore < 20
-        
-        if (isCompletelyUnrelated) {
-          console.log(`❌ Excluding ${candidate.full_name}: completely unrelated role (${matchScore}% match)`)
-          return null
-        }
-        
-        // Include if: level matches OR high match score OR similar position
-        if (!levelMatches && !highMatchScore && !similarPosition) {
-          console.log(`❌ Excluding ${candidate.full_name}: level mismatch (${candidateLevel} vs ${level}) and low match score (${matchScore})`)
-          return null
-        }
-        
-        console.log(`✅ Including ${candidate.full_name}: level=${candidateLevel}, match=${matchScore}`)
-        
-        return {
-          id: candidate.user_id,
-          name: candidate.full_name,
-          position: candidate.current_position || candidate.position || 'Unknown Position',
-          expectedSalary: parseSalary(candidate.expected_salary),
-          experience: candidate.experience_snapshot ? 
-            `${candidate.experience_snapshot.length} positions` : 'Experience not specified',
-          skills: candidate.skills_snapshot || [],
-          overallScore: candidate.overall_score || 0,
-          matchScore,
-          isRecommended: matchScore >= 70 && (candidate.overall_score || 0) >= 70
-        } as CandidateRecommendation
+    // Use the local BPOC candidates API instead of external API
+    const response = await fetch('/api/bpoc-candidates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        role,
+        level,
+        industry
       })
-      .filter((candidate): candidate is CandidateRecommendation => candidate !== null)
-    
-    // Sort by match score and overall score
-    candidatesWithScores.sort((a, b) => {
-      if (a.matchScore !== b.matchScore) {
-        return b.matchScore - a.matchScore
-      }
-      return b.overallScore - a.overallScore
-    })
-    
-    // Get top 10 recommendations
-    let recommendedCandidates = candidatesWithScores.slice(0, 10)
-    
-    // If we don't have enough candidates, try to include more with lower thresholds
-    if (recommendedCandidates.length < 3) {
-      console.log(`⚠️ Only ${recommendedCandidates.length} candidates found, trying more flexible matching...`)
-      
-      // Re-evaluate all candidates with more flexible criteria
-      const flexibleCandidates = activeCandidates
-        .map(candidate => {
-          const candidateLevel = determineExperienceLevel(candidate)
-          const matchScore = calculateMatchScore(
-            candidate.current_position || candidate.position || '', 
-            role
-          )
-          
-          // More flexible inclusion criteria for similar positions
-          const flexibleMatch = matchScore >= 25 || (candidate.overall_score || 0) >= 60
-          
-          if (!flexibleMatch) return null
-          
-          return {
-            id: candidate.user_id,
-            name: candidate.full_name,
-            position: candidate.current_position || candidate.position || 'Unknown Position',
-            expectedSalary: parseSalary(candidate.expected_salary),
-            experience: candidate.experience_snapshot ? 
-              `${candidate.experience_snapshot.length} positions` : 'Experience not specified',
-            skills: candidate.skills_snapshot || [],
-            overallScore: candidate.overall_score || 0,
-            matchScore,
-            isRecommended: matchScore >= 70 && (candidate.overall_score || 0) >= 70
-          } as CandidateRecommendation
-        })
-        .filter((candidate): candidate is CandidateRecommendation => candidate !== null)
-        .sort((a, b) => {
-          if (a.matchScore !== b.matchScore) {
-            return b.matchScore - a.matchScore
-          }
-          return b.overallScore - a.overallScore
-        })
-        .slice(0, 10)
-      
-      if (flexibleCandidates.length > recommendedCandidates.length) {
-        console.log(`✅ Found ${flexibleCandidates.length} candidates with flexible matching`)
-        recommendedCandidates = flexibleCandidates
-      }
-    }
-    
-    // Calculate average salary from recommended candidates
-    const averageSalary = recommendedCandidates.length > 0 
-      ? Math.round(recommendedCandidates.reduce((sum, c) => sum + c.expectedSalary, 0) / recommendedCandidates.length)
-      : 0
-    
-    console.log(`🎯 BPOC Service: Match results for ${role}:`, {
-      totalCandidates: candidatesWithScores.length,
-      recommendedCandidates: recommendedCandidates.length,
-      averageSalary: averageSalary,
-      hasValidSalaryData: averageSalary > 0,
-      dataSource: averageSalary > 0 ? 'REAL BPOC DATA' : 'NO VALID SALARY DATA',
-      topMatch: recommendedCandidates[0] ? {
-        name: recommendedCandidates[0].name,
-        matchScore: recommendedCandidates[0].matchScore,
-        salary: recommendedCandidates[0].expectedSalary
-      } : null
     });
-    
-    return {
-      role,
-      level,
-      recommendedCandidates,
-      averageSalary,
-      totalCandidates: candidatesWithScores.length
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const jobMatch = await response.json();
+    console.log(`📋 BPOC Service: Fetched ${jobMatch.totalCandidates} candidates from local API`);
+    
+    if (jobMatch.totalCandidates === 0) {
+      console.warn('⚠️ Local BPOC API returned no candidates');
+      return {
+        role,
+        level,
+        recommendedCandidates: [],
+        averageSalary: 0,
+        totalCandidates: 0
+      };
+    }
+    
+    return jobMatch;
     
   } catch (error) {
     console.error('Error fetching candidate recommendations:', error)
@@ -394,27 +190,13 @@ export async function getAvailableRolesAndLevels(): Promise<{
   try {
     const bpocEmployees = await fetchBPOCEmployeeData()
     
-    const activeCandidates = bpocEmployees.filter(emp => 
-      emp.work_status_completed === true && 
-      emp.expected_salary && 
-      emp.expected_salary.trim() !== ''
-    )
-    
-    // Extract unique roles
     const roleSet = new Set<string>()
     const levelCounts = { entry: 0, mid: 0, senior: 0 }
     
-    activeCandidates.forEach(candidate => {
-      const position = candidate.current_position || candidate.position
-      if (position) {
-        // Normalize role names
-        const normalizedRole = position.toLowerCase()
-          .replace(/senior|junior|lead|manager|specialist|coordinator|assistant/g, '')
-          .trim()
-        
-        if (normalizedRole) {
-          roleSet.add(normalizedRole)
-        }
+    bpocEmployees.forEach(candidate => {
+      const role = candidate.current_position || candidate.position
+      if (role) {
+        roleSet.add(role)
       }
       
       const level = determineExperienceLevel(candidate)

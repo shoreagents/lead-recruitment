@@ -243,6 +243,7 @@ export default function TypingHeroPage() {
   const [recoveryGraceTime, setRecoveryGraceTime] = useState(0); // 30-second grace period after recovery
   const recoveryGraceRef = useRef(0); // Ref for accessing grace time in timer without causing re-renders
   const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>('rockstar');
+  const [stablePerformanceLevel, setStablePerformanceLevel] = useState<DifficultyLevel>('rockstar');
   const [difficultyProgress, setDifficultyProgress] = useState<DifficultyProgress>({
     rookie: false,
     rockstar: false,
@@ -278,6 +279,7 @@ export default function TypingHeroPage() {
     correctWords: 0,
     totalWords: 0,
     missedWords: 0,
+    lastTypingTime: 0, // Track when user last typed
     // NEW: Advanced WPM tracking
     totalKeypresses: 0,
     burstWPM: 0,
@@ -790,10 +792,10 @@ export default function TypingHeroPage() {
         // Reset all tracking
         resetGameTracking();
         
-        // Update spawn rate for Chapter 1
-        const chapterConfig = getChapterDifficulty(1);
-        setCurrentSpawnRate(chapterConfig.spawnRate);
-        console.log('🎯 Chapter 1 difficulty:', chapterConfig.displayName, 'spawn rate:', chapterConfig.spawnRate);
+        // Update spawn rate for selected difficulty
+        const difficultyConfig = getCurrentConfig();
+        setCurrentSpawnRate(difficultyConfig.spawnRate);
+        console.log('🎯 Selected difficulty:', difficultyConfig.displayName, 'spawn rate:', difficultyConfig.spawnRate);
         
         setStoryReady(true);
         setGameState('story-ready');
@@ -842,10 +844,10 @@ export default function TypingHeroPage() {
       // Reset all tracking
       resetGameTracking();
       
-      // Update spawn rate for Chapter 1
-      const chapterConfig = getChapterDifficulty(1);
-      setCurrentSpawnRate(chapterConfig.spawnRate);
-      console.log('🎯 Chapter 1 difficulty:', chapterConfig.displayName, 'spawn rate:', chapterConfig.spawnRate);
+      // Update spawn rate for selected difficulty
+      const difficultyConfig = getCurrentConfig();
+      setCurrentSpawnRate(difficultyConfig.spawnRate);
+      console.log('🎯 Selected difficulty:', difficultyConfig.displayName, 'spawn rate:', difficultyConfig.spawnRate);
       
       setStoryReady(true);
       setGameState('story-ready');
@@ -948,9 +950,9 @@ export default function TypingHeroPage() {
       // Reset all tracking
       resetGameTracking();
       
-      // Update spawn rate for Chapter 1
-      const chapterConfig = getChapterDifficulty(1);
-      setCurrentSpawnRate(chapterConfig.spawnRate);
+      // Update spawn rate for selected difficulty
+      const difficultyConfig = getCurrentConfig();
+      setCurrentSpawnRate(difficultyConfig.spawnRate);
       
       setStoryReady(true);
       setGameState('story-ready');
@@ -1054,6 +1056,17 @@ export default function TypingHeroPage() {
     }
   };
 
+  // Update stable performance level only when there's significant change
+  useEffect(() => {
+    if (gameStats.totalWords >= 10) { // Only update after enough data
+      const newLevel = getActualPerformanceLevel();
+      if (newLevel !== stablePerformanceLevel) {
+        // Only update if the level has actually changed
+        setStablePerformanceLevel(newLevel);
+      }
+    }
+  }, [gameStats.wpm, gameStats.accuracy, gameStats.totalWords, gameStats.fires, gameStats.poos]);
+
   // Removed complex WPM calculation - using simple method now
 
   // Removed complex WPM tracking functions
@@ -1151,9 +1164,9 @@ export default function TypingHeroPage() {
       // Note: setGameState('story-ready') is handled inside loadOrGenerateCompleteStory
     });
     
-        // Use chapter-based difficulty for spawn rate
-        const chapterConfig = getChapterDifficulty(1); // Start with Chapter 1
-        setCurrentSpawnRate(chapterConfig.spawnRate);
+        // Use selected difficulty for spawn rate
+        const difficultyConfig = getCurrentConfig();
+        setCurrentSpawnRate(difficultyConfig.spawnRate);
     setGameStats({
       score: 0,
       fires: 0,
@@ -1747,7 +1760,8 @@ export default function TypingHeroPage() {
     if (value.length > 0) {
       setGameStats(prev => ({
         ...prev,
-        charactersTyped: prev.charactersTyped + 1
+        charactersTyped: prev.charactersTyped + 1,
+        lastTypingTime: prev.elapsedTime // Update last typing time
       }));
     }
     
@@ -2155,13 +2169,19 @@ export default function TypingHeroPage() {
           console.log(`🎮 Difficulty increased! Speed: ${newSpeed.toFixed(1)}, Spawn Rate: ${newSpawnRate}ms`);
         }
         
-        // Simple, accurate WPM calculation
+        // WPM calculation - only update when actively typing
         const wordsTyped = prev.charactersTyped / 5;
         const minutes = newElapsedTime / 60;
-        let finalWPM = minutes > 0 ? Math.round(wordsTyped / minutes) : 0;
+        let finalWPM = prev.wpm; // Keep current WPM if not actively typing
         
-        // Cap at realistic maximum
-        finalWPM = Math.min(finalWPM, 120); // Reasonable max for a typing game
+        // Only recalculate WPM if we have characters and it's been less than 3 seconds since last activity
+        // This prevents WPM from dropping when user pauses
+        const timeSinceLastActivity = newElapsedTime - (prev.lastTypingTime || 0);
+        if (prev.charactersTyped > 0 && minutes > 0 && timeSinceLastActivity <= 3) {
+          finalWPM = Math.round(wordsTyped / minutes);
+          // Cap at realistic maximum
+          finalWPM = Math.min(finalWPM, 120); // Reasonable max for a typing game
+        }
         
         // Simple accuracy calculation
         let accuracy = 0;
@@ -4070,8 +4090,8 @@ export default function TypingHeroPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-400">Level:</span>
-                        <span className="text-sm font-bold" style={{ color: getDifficultyColor(getActualPerformanceLevel()).split(' ')[0].split('-')[1] }}>
-                          {BPO_VOCABULARY[getActualPerformanceLevel()].displayName}
+                        <span className="text-sm font-bold" style={{ color: getDifficultyColor(stablePerformanceLevel).split(' ')[0].split('-')[1] }}>
+                          {BPO_VOCABULARY[stablePerformanceLevel].displayName}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -5058,7 +5078,12 @@ export default function TypingHeroPage() {
                         <p className="text-2xl font-bold text-yellow-300 mb-1">
                           {Math.round(gameStats.burstWPM * 0.8)}-{Math.round(gameStats.wpm * 1.2)} WPM
                         </p>
-                        <p className="text-gray-400 text-sm">Expected performance on standard typing tests</p>
+                        <p className="text-gray-400 text-sm">
+                          {gameStats.wpm >= 60 ? "Professional typing speed - excellent for BPO roles" :
+                           gameStats.wpm >= 40 ? "Good typing speed - suitable for most office work" :
+                           gameStats.wpm >= 25 ? "Developing speed - practice will improve performance" :
+                           "Beginner level - focus on accuracy first, then speed"}
+                        </p>
                       </motion.div>
                           </motion.div>
                         )}

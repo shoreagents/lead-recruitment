@@ -9,6 +9,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  type?: 'text' | 'candidates' | 'summary';
+  data?: any;
   relatedContent?: Array<{
     title: string;
     content: string;

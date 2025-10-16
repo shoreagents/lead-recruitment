@@ -161,6 +161,7 @@ export default function ProfilePage() {
   const [isCoreTraitsExpanded, setIsCoreTraitsExpanded] = useState<boolean>(false);
   const [isCulturalStrengthsExpanded, setIsCulturalStrengthsExpanded] = useState<boolean>(false);
   const [isTypingAnalysisExpanded, setIsTypingAnalysisExpanded] = useState<boolean>(false);
+  const [isTypingStrengthsExpanded, setIsTypingStrengthsExpanded] = useState<boolean>(false);
 
   // Function to determine rank based on overall score (matching leaderboards and talent search system)
   const getRank = (score: number) => {
@@ -471,9 +472,12 @@ export default function ProfilePage() {
       // Get the current session token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.error('No session found');
+        console.error('❌ No session found');
         return;
       }
+
+      console.log('🔄 Saving work status for user:', userProfile.id);
+      console.log('📝 Work status data:', editedWorkStatus);
 
       const response = await fetch('/api/user/update-work-status', {
         method: 'PUT',
@@ -489,7 +493,12 @@ export default function ProfilePage() {
         }),
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Work status saved successfully:', result);
+        
         // Update the local state
         setUserProfile(prev => prev ? {
           ...prev,
@@ -506,10 +515,19 @@ export default function ProfilePage() {
         } : null);
         setIsEditingWorkStatus(false);
       } else {
-        console.error('Failed to save work status changes');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Failed to save work status changes:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        // Show user-friendly error message
+        alert(`Failed to save work status: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error saving work status changes:', error);
+      console.error('❌ Error saving work status changes:', error);
+      alert(`Error saving work status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
     }
@@ -2998,20 +3016,6 @@ export default function ProfilePage() {
                                                 </div>
                                               </div>
                                               
-                                              {/* Strengths */}
-                                              {analysis.aiAssessment.strengths && analysis.aiAssessment.strengths.length > 0 && (
-                                                <div>
-                                                  <span className="text-green-400 font-semibold">Strengths:</span>
-                                                  <ul className="mt-1 ml-4 space-y-1">
-                                                    {analysis.aiAssessment.strengths.map((strength: string, index: number) => (
-                                                      <li key={index} className="flex items-start gap-2">
-                                                        <span className="text-green-400 mt-1">•</span>
-                                                        <span>{strength}</span>
-                                                      </li>
-                                                    ))}
-                                                  </ul>
-                                                </div>
-                                              )}
                                               
                                             </div>
                                           );
@@ -3025,6 +3029,65 @@ export default function ProfilePage() {
                                         return typeof userProfile.game_stats.typing_hero_stats.ai_analysis === 'string' 
                                           ? userProfile.game_stats.typing_hero_stats.ai_analysis
                                           : JSON.stringify(userProfile.game_stats.typing_hero_stats.ai_analysis);
+                                      }
+                                    })()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Strengths Section */}
+                              {userProfile.game_stats.typing_hero_stats.ai_analysis && (
+                                <div className="mt-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-400/30">
+                                  <button
+                                    onClick={() => setIsTypingStrengthsExpanded(!isTypingStrengthsExpanded)}
+                                    className="w-full flex items-center justify-between text-sm font-semibold text-yellow-300 mb-2 hover:text-yellow-200 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                                      Strengths
+                                    </div>
+                                    <ChevronDown 
+                                      className={`w-4 h-4 transition-transform duration-200 ${
+                                        isTypingStrengthsExpanded ? 'rotate-180' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                  {isTypingStrengthsExpanded && (
+                                    <div className="text-gray-300 text-sm leading-relaxed">
+                                    {(() => {
+                                      try {
+                                        const analysis = typeof userProfile.game_stats.typing_hero_stats.ai_analysis === 'string' 
+                                          ? JSON.parse(userProfile.game_stats.typing_hero_stats.ai_analysis)
+                                          : userProfile.game_stats.typing_hero_stats.ai_analysis;
+                                        
+                                        if (analysis.aiAssessment && analysis.aiAssessment.strengths && analysis.aiAssessment.strengths.length > 0) {
+                                          return (
+                                            <div>
+                                              <span className="text-yellow-400 font-semibold">Your Typing Strengths:</span>
+                                              <ul className="mt-2 ml-4 space-y-2">
+                                                {analysis.aiAssessment.strengths.map((strength: string, index: number) => (
+                                                  <li key={index} className="flex items-start gap-2">
+                                                    <span className="text-yellow-400 mt-1">💪</span>
+                                                    <span>{strength}</span>
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        return (
+                                          <div className="text-gray-400 italic">
+                                            No strengths data available
+                                          </div>
+                                        );
+                                      } catch (error) {
+                                        return (
+                                          <div className="text-gray-400 italic">
+                                            Unable to load strengths data
+                                          </div>
+                                        );
                                       }
                                     })()}
                                     </div>
@@ -3064,22 +3127,22 @@ export default function ProfilePage() {
                               <div className="text-center">
                                 <div className="text-6xl mb-2">
                                   {userProfile.game_stats.disc_personality_stats.primary_type === 'D' && (
-                                    <span className="inline-block animate-bounce">🦅</span>
+                                    <span className="inline-block text-6xl animal-bounce">
+                                      🦅
+                                    </span>
                                   )}
                                   {userProfile.game_stats.disc_personality_stats.primary_type === 'I' && (
-                                    <span className="inline-block animate-pulse">🦚</span>
+                                    <span className="inline-block text-6xl animal-bounce">
+                                      🦚
+                                    </span>
                                   )}
                                   {userProfile.game_stats.disc_personality_stats.primary_type === 'S' && (
-                                    <span className="inline-block animate-pulse">🐢</span>
+                                    <span className="inline-block text-6xl animal-bounce">
+                                      🐢
+                                    </span>
                                   )}
                                   {userProfile.game_stats.disc_personality_stats.primary_type === 'C' && (
-                                    <span 
-                                      className="inline-block animate-spin"
-                                      style={{
-                                        animation: 'owlWise 3s ease-in-out infinite, owlBlink 4s ease-in-out infinite',
-                                        transformOrigin: 'center'
-                                      }}
-                                    >
+                                    <span className="inline-block text-6xl animal-bounce">
                                       🦉
                                     </span>
                                   )}
@@ -3668,10 +3731,10 @@ export default function ProfilePage() {
                                         .replace(/^[^:]*:\s*/, '') // Remove everything before the first colon
                                         .trim();
                                       
-                                      // Split by bullet points and display each as a separate line
-                                      // Use more specific regex to avoid splitting on hyphens within words
+                                      // Split by numbered items or bullet points and display each as a separate line
+                                      // Handle both numbered format (1. 2. 3.) and bullet points (- • *)
                                       const bulletPoints = cleanCultural
-                                        .split(/(?<=^|\n)\s*[-•*]\s+/)
+                                        .split(/(?<=^|\n)\s*(?:\d+\.\s*|[-•*]\s+)/)
                                         .map((point: string) => point.trim())
                                         .filter((point: string) => point.length > 0);
                                       

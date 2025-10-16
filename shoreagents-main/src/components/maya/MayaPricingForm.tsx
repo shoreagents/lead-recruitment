@@ -3,17 +3,54 @@
 import { MayaTextField } from './MayaTextField'
 import { MayaSummaryCard } from './MayaSummaryCard'
 import { MayaPricingSummaryCard } from './MayaPricingSummaryCard'
-import { getCandidateRecommendations } from '@/lib/bpocPricingService'
 import { CandidateRecommendation } from '@/lib/bpocPricingService'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { useFetchBPOCCandidates } from '@/hooks/useBPOCCandidates'
+
+// Real BPOC candidate recommendation function (same as pricing calculator)
+async function fetchBPOCCandidateRecommendations(
+  role: string, 
+  level: 'entry' | 'mid' | 'senior', 
+  industry?: string, 
+  memberCount?: number
+) {
+  try {
+    console.log(`🔍 Fetching real BPOC candidates for: ${role} (${level} level) in ${industry} industry`);
+    
+    const response = await fetch('/api/bpoc-candidates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        role,
+        level,
+        industry
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`BPOC API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Found ${result.totalCandidates} real BPOC candidates for ${role}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ BPOC candidate API error for ${role}:`, error);
+    throw error;
+  }
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  type?: 'text' | 'candidates' | 'summary'
+  data?: any
 }
 
 interface MayaPricingFormProps {
@@ -33,8 +70,8 @@ export const MayaPricingForm = ({
   generateMessageId,
   formData
 }: MayaPricingFormProps) => {
-  const [candidateRecommendations, setCandidateRecommendations] = useState<CandidateRecommendation[]>([])
-  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false)
+  // Use custom TanStack Query hook for BPOC candidates
+  const fetchCandidatesMutation = useFetchBPOCCandidates()
 
   // Helper function to capitalize first letter of each word
   const capitalizeName = (name: string): string => {
@@ -335,30 +372,6 @@ export const MayaPricingForm = ({
     onStepChange(field)
   }
 
-  const fetchCandidateRecommendations = async () => {
-    setIsLoadingCandidates(true)
-    try {
-      // Get the main role and experience level from form data
-      const mainRole = formData.roles || 'Team Member'
-      const experienceLevel = formData.experience || 'mid'
-      const industry = formData.industry || undefined
-      
-      console.log('🔍 Fetching BPOC candidates for:', { mainRole, experienceLevel, industry })
-      
-      // Fetch candidate recommendations using the real BPOC service
-      const jobMatch = await getCandidateRecommendations(mainRole, experienceLevel as 'entry' | 'mid' | 'senior', industry)
-      
-      console.log('✅ BPOC candidates fetched:', jobMatch.recommendedCandidates.length)
-      setCandidateRecommendations(jobMatch.recommendedCandidates)
-      
-    } catch (error) {
-      console.error('❌ Error fetching BPOC candidates:', error)
-      // Set empty array on error
-      setCandidateRecommendations([])
-    } finally {
-      setIsLoadingCandidates(false)
-    }
-  }
 
   const handleCandidateRecommendationComplete = (value: string) => {
     // Add user response message to chat
@@ -371,18 +384,8 @@ export const MayaPricingForm = ({
     setMessages(prev => [...prev, userMessage])
     
     if (value === 'yes') {
-      // Fetch candidates and show recommendations step
-      fetchCandidateRecommendations()
-      onStepChange('showCandidates')
-      
-      // Add Maya's response
-      const mayaMessage: Message = {
-        id: generateMessageId(),
-        role: 'assistant',
-        content: 'Perfect! Let me find some talented professionals that match your requirements. Here are my top recommendations for your team: 🎯',
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, mayaMessage])
+      // Show confirmation step first
+      onStepChange('candidateConfirmation')
     } else {
       // User doesn't want recommendations, close the form
       onStepChange(null)
@@ -395,6 +398,65 @@ export const MayaPricingForm = ({
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, mayaMessage])
+    }
+  }
+
+  const handleCandidateConfirmation = async (confirmed: boolean) => {
+    if (confirmed) {
+      // Add Maya's response
+      const mayaMessage: Message = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: 'Perfect! Let me find some talented professionals that match your requirements. Here are my top recommendations for your team: 🎯',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, mayaMessage])
+      
+      // Get the main role and experience level from form data
+      // Extract role from member1Role (first member's role)
+      const mainRole = formData.member1Role || formData.roles
+      const experienceLevel = formData.experience || 'mid'
+      const industry = formData.industry || undefined
+      
+      console.log('🔍 Candidate fetch data:', { mainRole, experienceLevel, industry, formData })
+      
+      // Don't fetch candidates if role is not specified
+      if (!mainRole || mainRole.trim() === '') {
+        console.log('⚠️ No role specified, skipping candidate fetch')
+        onStepChange(null)
+        return
+      }
+      
+      // Fetch candidates using TanStack Query mutation
+      const result = await fetchCandidatesMutation.mutateAsync({
+        role: mainRole,
+        level: experienceLevel as 'entry' | 'mid' | 'senior',
+        industry
+      })
+      
+      // Add candidates as a special message type
+      const candidatesMessage: Message = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: 'Recommended Candidates',
+        timestamp: new Date(),
+        type: 'candidates',
+        data: { candidates: result.recommendedCandidates }
+      }
+      setMessages(prev => [...prev, candidatesMessage])
+      
+      // Close the form after showing candidates
+      onStepChange(null)
+    } else {
+      // User declined, go back to summary
+      const mayaMessage: Message = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: 'No problem! You can always ask me to show candidates later. Is there anything else you\'d like to know about your quote?',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, mayaMessage])
+      onStepChange(null)
     }
   }
 
@@ -548,14 +610,6 @@ export const MayaPricingForm = ({
                 >
                   Senior Level (6+ years)
                 </Button>
-                <Button
-                  onClick={() => handleExperienceComplete('mixed')}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs px-3 py-2 h-auto justify-start"
-                >
-                  Any Level
-                </Button>
               </div>
             </div>
           </div>
@@ -650,14 +704,6 @@ export const MayaPricingForm = ({
                 >
                   Senior Level (6+ years)
                 </Button>
-                <Button
-                  onClick={() => handleExperienceIndividualComplete('mixed')}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs px-3 py-2 h-auto justify-start"
-                >
-                  Any Level
-                </Button>
               </div>
             </div>
           </div>
@@ -730,87 +776,44 @@ export const MayaPricingForm = ({
     )
   }
 
+  // Candidates are now rendered as messages in the chat history, not as a separate step
+  // This step has been removed - candidates appear as a special message type
+  
+  // Return null for showCandidates step since it's now handled in messages
   if (currentStep === 'showCandidates') {
+    return null
+  }
+  if (currentStep === 'candidateConfirmation') {
     return (
-      <div key="show-candidates-step" className="flex justify-start mb-4">
+      <div key="candidate-confirmation-step" className="flex justify-start mb-4">
         <div className="max-w-[80%]">
           <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-800 mb-2">
-                  Recommended Candidates
+                  Ready to see your candidates?
                 </h3>
                 <p className="text-xs text-gray-600 mb-4">
-                  Here are talented professionals that match your requirements
+                  I'll search our talent database to find the best professionals that match your specific requirements.
                 </p>
               </div>
               
-              {isLoadingCandidates ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-lime-600"></div>
-                  <span className="ml-2 text-sm text-gray-600">Finding the best candidates for you...</span>
-                </div>
-              ) : candidateRecommendations.length > 0 ? (
-                <div className="space-y-3">
-                  {candidateRecommendations.slice(0, 5).map((candidate, index) => (
-                    <div key={candidate.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm text-gray-900">{capitalizeName(candidate.name)}</h4>
-                          <p className="text-xs text-gray-600 mb-1">{capitalizeName(candidate.position)}</p>
-                          <p className="text-xs text-gray-500">{candidate.experience}</p>
-                          {candidate.skills && candidate.skills.length > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Skills: {candidate.skills.slice(0, 3).join(', ')}
-                              {candidate.skills.length > 3 && ` +${candidate.skills.length - 3} more`}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs bg-lime-100 text-lime-800 px-2 py-1 rounded">
-                              {candidate.isRecommended ? 'Recommended' : 'Available'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ${candidate.expectedSalary.toLocaleString()}/month
-                            </span>
-                            {candidate.matchScore > 0 && (
-                              <span className="text-xs text-gray-500">
-                                {Math.round(candidate.matchScore * 100)}% match
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <Button size="sm" className="text-xs">
-                          View Profile
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-500 mb-2">No candidates found</p>
-                  <p className="text-xs text-gray-400">Try adjusting your requirements or check back later</p>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2">
                 <Button
-                  onClick={() => onStepChange(null)}
+                  onClick={() => handleCandidateConfirmation(true)}
+                  size="sm"
+                  className="bg-lime-600 hover:bg-lime-700 text-white"
+                >
+                  Yes, Show Candidates
+                </Button>
+                <Button
+                  onClick={() => handleCandidateConfirmation(false)}
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-gray-600"
                 >
-                  Close
+                  Not Now
                 </Button>
-                {candidateRecommendations.length > 0 && (
-                  <Button
-                    onClick={() => onStepChange(null)}
-                    size="sm"
-                    className="text-xs"
-                  >
-                    View All Candidates
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -1062,12 +1065,14 @@ const JobDescriptionStep = ({ onComplete, setMessages, generateMessageId, formDa
     } catch (error) {
       console.error('Error generating job description:', error)
       // Fallback description
-      const experienceText = {
+      const experienceMap = {
         'entry': 'entry level',
         'mid': 'mid level', 
         'senior': 'senior level',
         'mixed': 'mixed experience levels'
-      }[formData.experience] || formData.experience || 'various experience levels';
+      } as const;
+      
+      const experienceText = experienceMap[formData.experience as keyof typeof experienceMap] || formData.experience || 'various experience levels';
       
       setDescription(`We are looking for ${formData.teamSize} ${formData.roleType === 'same' ? 'team members' : 'professionals'} in ${formData.roles || 'various roles'} with ${experienceText} experience. This is a great opportunity to work with an international team.`)
     } finally {
@@ -1141,5 +1146,131 @@ const JobDescriptionStep = ({ onComplete, setMessages, generateMessageId, formDa
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// Component to render candidates as a message in the chat
+export function MayaCandidatesMessage({ candidates }: { candidates: CandidateRecommendation[] }) {
+  const capitalizeName = (name: string) => {
+    return name.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ')
+  }
+
+  return (
+    <div className="flex justify-start mb-4">
+      <div className="max-w-[80%]">
+        <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-800 mb-2">
+                Recommended Candidates
+              </h3>
+              <p className="text-xs text-gray-600 mb-4">
+                Here are talented professionals that match your requirements
+              </p>
+            </div>
+            
+            {candidates.length > 0 ? (
+              <div className="space-y-3">
+                {candidates.slice(0, 10).map((candidate) => (
+                  <div key={candidate.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div className="flex gap-3">
+                      {/* Avatar */}
+                      <div className="shrink-0">
+                        {candidate.avatar && candidate.avatar.trim() !== '' ? (
+                          <img 
+                            src={candidate.avatar} 
+                            alt={candidate.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                            onError={(e) => {
+                              console.log('Avatar failed to load for', candidate.name, 'URL:', candidate.avatar);
+                              // Fallback to initials if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                            onLoad={() => {
+                              console.log('Avatar loaded successfully for', candidate.name);
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white font-semibold text-sm ${candidate.avatar && candidate.avatar.trim() !== '' ? 'hidden' : ''}`}>
+                          {candidate.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="mb-3">
+                          <h4 className="font-semibold text-sm text-gray-900">{capitalizeName(candidate.name)}</h4>
+                          <p className="text-xs text-gray-600 mb-1">{capitalizeName(candidate.position)}</p>
+                          <p className="text-xs text-gray-500">{candidate.experience}</p>
+                          {candidate.skills && candidate.skills.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                              <span className="font-medium">Skills:</span> {candidate.skills.slice(0, 3).join(', ')}
+                              {candidate.skills.length > 3 && ` +${candidate.skills.length - 3} more`}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 w-full">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs bg-lime-100 text-lime-800 px-2 py-1 rounded whitespace-nowrap">
+                              {candidate.isRecommended ? 'Recommended' : 'Available'}
+                            </span>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                              ₱{candidate.expectedSalary.toLocaleString()}/month
+                            </span>
+                            {candidate.matchScore > 0 && (
+                              <span className="text-xs text-gray-500 whitespace-nowrap">
+                                {Math.round(candidate.matchScore)}% match
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 w-full">
+                            <Button size="sm" className="text-xs w-full">
+                              View Profile
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-xs w-full border-lime-500 text-lime-700 hover:bg-lime-50"
+                            >
+                              Ask for Interview
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-gray-900 mb-2">We don't have matching candidates yet</p>
+                <p className="text-xs text-gray-600 mb-4">
+                  We're sorry, but we don't currently have candidates that match this specific role in our talent pool. Our database is constantly growing!
+                </p>
+                <a 
+                  href="/we-got-talent" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-xs font-medium text-lime-700 hover:text-lime-800 hover:underline"
+                >
+                  Browse our full talent pool
+                  <svg className="ml-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
