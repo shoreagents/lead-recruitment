@@ -19,6 +19,7 @@ interface MayaPricingSummaryCardProps {
   onEdit: (field: string) => void
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   generateMessageId: () => string
+  showCandidateMessage?: boolean
 }
 
 export const MayaPricingSummaryCard = ({
@@ -26,17 +27,19 @@ export const MayaPricingSummaryCard = ({
   onConfirm,
   onEdit,
   setMessages,
-  generateMessageId
+  generateMessageId,
+  showCandidateMessage = true
 }: MayaPricingSummaryCardProps) => {
   const [quoteData, setQuoteData] = useState<any>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+  const [hasShownCandidateMessage, setHasShownCandidateMessage] = useState(false)
   
   // Use currency context for IP-based currency detection
   const { selectedCurrency, formatPrice } = useCurrency()
 
   // Automatically trigger candidate recommendation after summary is shown
   useEffect(() => {
-    if (quoteData) {
+    if (quoteData && !hasShownCandidateMessage && showCandidateMessage) {
       // Add Maya's message asking about candidate recommendations
       const mayaMessage: Message = {
         id: generateMessageId(),
@@ -46,12 +49,15 @@ export const MayaPricingSummaryCard = ({
       }
       setMessages(prev => [...prev, mayaMessage])
       
-      // Automatically go to candidate recommendation step
+      // Mark that we've shown the candidate message
+      setHasShownCandidateMessage(true)
+      
+      // Automatically go to candidate confirmation step after a delay
       setTimeout(() => {
-        onEdit('showCandidates')
-      }, 1000) // Small delay to let the message appear first
+        onEdit('candidateConfirmation')
+      }, 2000) // Increased delay to let the quote summary be visible first
     }
-  }, [quoteData, generateMessageId, setMessages, onEdit])
+  }, [quoteData, hasShownCandidateMessage, showCandidateMessage, generateMessageId, setMessages, onEdit])
 
   // Calculate pricing based on form data
   useEffect(() => {

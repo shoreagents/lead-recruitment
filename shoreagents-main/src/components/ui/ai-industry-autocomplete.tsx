@@ -50,9 +50,76 @@ export function AIIndustryAutocomplete({
     'industry'
   );
 
-  // Use only AI suggestions - no hardcoded fallbacks
-  const suggestions = searchQuery.length >= 2 && aiSuggestions && Array.isArray(aiSuggestions) && debouncedQuery === searchQuery
-    ? aiSuggestions 
+  // Fallback suggestions for common industry terms - INDUSTRIES ONLY, NOT JOB ROLES
+  const getFallbackSuggestions = (query: string): AISuggestion[] => {
+    const lowerQuery = query.toLowerCase();
+    
+    // Technology-related industries (not job roles)
+    if (lowerQuery.includes('tech') || lowerQuery.includes('software') || lowerQuery.includes('it')) {
+      return [
+        { title: "Technology", description: "Technology companies and IT services industry", level: "Industry" },
+        { title: "Software", description: "Software development and technology industry", level: "Industry" },
+        { title: "Information Technology", description: "IT services and technology industry", level: "Industry" },
+        { title: "SaaS", description: "Software as a Service industry", level: "Industry" },
+        { title: "Fintech", description: "Financial technology industry", level: "Industry" }
+      ];
+    }
+    
+    // Healthcare-related industries (not job roles)
+    if (lowerQuery.includes('health') || lowerQuery.includes('medical') || lowerQuery.includes('care')) {
+      return [
+        { title: "Healthcare", description: "Healthcare services and medical industry", level: "Industry" },
+        { title: "Medical", description: "Medical services and healthcare industry", level: "Industry" },
+        { title: "Telemedicine", description: "Digital healthcare industry", level: "Industry" },
+        { title: "Medical Devices", description: "Medical equipment manufacturing industry", level: "Industry" },
+        { title: "Wellness", description: "Health and wellness industry", level: "Industry" }
+      ];
+    }
+    
+    // Finance-related industries (not job roles)
+    if (lowerQuery.includes('finance') || lowerQuery.includes('bank') || lowerQuery.includes('money')) {
+      return [
+        { title: "Finance", description: "Financial services industry", level: "Industry" },
+        { title: "Banking", description: "Banking and financial services industry", level: "Industry" },
+        { title: "Investment", description: "Investment and financial services industry", level: "Industry" },
+        { title: "Insurance", description: "Insurance services industry", level: "Industry" },
+        { title: "Accounting", description: "Accounting and financial services industry", level: "Industry" }
+      ];
+    }
+    
+    // General industry fallbacks
+    if (lowerQuery.includes('retail') || lowerQuery.includes('shop') || lowerQuery.includes('store')) {
+      return [
+        { title: "Retail", description: "Retail and consumer goods industry", level: "Industry" },
+        { title: "E-commerce", description: "Online retail and e-commerce industry", level: "Industry" },
+        { title: "Consumer Goods", description: "Consumer products and retail industry", level: "Industry" }
+      ];
+    }
+    
+    if (lowerQuery.includes('education') || lowerQuery.includes('school') || lowerQuery.includes('learning')) {
+      return [
+        { title: "Education", description: "Education and training industry", level: "Industry" },
+        { title: "E-learning", description: "Online education industry", level: "Industry" },
+        { title: "Training", description: "Professional training and development industry", level: "Industry" }
+      ];
+    }
+    
+    if (lowerQuery.includes('real') || lowerQuery.includes('estate') || lowerQuery.includes('property')) {
+      return [
+        { title: "Real Estate", description: "Real estate and property industry", level: "Industry" },
+        { title: "Property Management", description: "Property management industry", level: "Industry" },
+        { title: "Construction", description: "Construction and building industry", level: "Industry" }
+      ];
+    }
+    
+    return [];
+  };
+
+  // Use AI suggestions with fallback for common terms
+  const suggestions = searchQuery.length >= 2 && debouncedQuery === searchQuery
+    ? (aiSuggestions && Array.isArray(aiSuggestions) && aiSuggestions.length > 0 
+        ? aiSuggestions 
+        : getFallbackSuggestions(searchQuery))
     : [];
   
   const inputRef = useRef<HTMLInputElement>(null);
