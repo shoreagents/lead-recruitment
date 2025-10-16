@@ -550,9 +550,15 @@ function JobMatchingContent() {
     // Sort by match percentage if user is logged in and match scores are available
     if (user?.id && Object.keys(matchScores).length > 0) {
       filtered.sort((a, b) => {
-        const scoreA = matchScores[a.id]?.score || 0;
-        const scoreB = matchScores[b.id]?.score || 0;
-        return scoreB - scoreA; // Sort by highest match first
+        const scoreA = matchScores[a.id]?.score;
+        const scoreB = matchScores[b.id]?.score;
+        
+        // Handle null scores - put them at the end
+        if (scoreA === null && scoreB === null) return 0;
+        if (scoreA === null) return 1;
+        if (scoreB === null) return -1;
+        
+        return (scoreB || 0) - (scoreA || 0); // Sort by highest match first
       });
     }
 
@@ -935,7 +941,7 @@ function JobMatchingContent() {
                       ) : matchScores[job.id] !== undefined ? (
                         <div className="relative">
                           <div className="flex items-center gap-2">
-                            {matchScores[job.id].error ? (
+                            {matchScores[job.id].error || matchScores[job.id].score === null ? (
                               <Badge className="bg-red-500/20 text-red-400 border-red-500/30 px-3 py-1 text-sm">
                                 AI Failed
                               </Badge>
@@ -982,12 +988,12 @@ function JobMatchingContent() {
                       }}
                       disabled={Boolean(
                         !!appliedMap[job.id] || 
-                        (user?.id && matchScores[job.id]?.score !== undefined && matchScores[job.id].score < 65)
+                        (user?.id && matchScores[job.id]?.score !== undefined && matchScores[job.id].score !== null && matchScores[job.id].score < 65)
                       )}
                     >
                       {!!appliedMap[job.id] 
                         ? 'Already Applied' 
-                        : (user?.id && matchScores[job.id]?.score !== undefined && matchScores[job.id].score < 65)
+                        : (user?.id && matchScores[job.id]?.score !== undefined && matchScores[job.id].score !== null && matchScores[job.id].score < 65)
                           ? 'Not Recommended'
                           : 'View & Apply'
                       }
@@ -1145,7 +1151,7 @@ function JobMatchingContent() {
                             AI Analyzing...
                           </Badge>
                         ) : matchScores[selectedJobData.id] !== undefined ? (
-                          matchScores[selectedJobData.id].error ? (
+                          matchScores[selectedJobData.id].error || matchScores[selectedJobData.id].score === null ? (
                             <Badge className="bg-red-500/20 text-red-400 border-red-500/30 px-3 py-1 text-sm">
                               AI Failed
                             </Badge>
@@ -1327,7 +1333,7 @@ function JobMatchingContent() {
                           className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white border-0 focus:border-0 focus:ring-0 text-base py-3 disabled:opacity-60 disabled:cursor-not-allowed"
                           disabled={Boolean(
                             !!appliedMap[selectedJobData.id] || 
-                            (user?.id && matchScores[selectedJobData.id]?.score !== undefined && matchScores[selectedJobData.id].score < 65)
+                            (user?.id && matchScores[selectedJobData.id]?.score !== undefined && matchScores[selectedJobData.id].score !== null && matchScores[selectedJobData.id].score < 65)
                           )}
                           onClick={async () => {
                           try {
@@ -1365,7 +1371,7 @@ function JobMatchingContent() {
                                                 >
                                                          {!!appliedMap[selectedJobData.id] 
                                ? 'Already Applied' 
-                               : (user?.id && matchScores[selectedJobData.id]?.score !== undefined && matchScores[selectedJobData.id].score < 65)
+                               : (user?.id && matchScores[selectedJobData.id]?.score !== undefined && matchScores[selectedJobData.id].score !== null && matchScores[selectedJobData.id].score < 65)
                                  ? 'Not Recommended'
                                  : 'Apply now'
                              }
