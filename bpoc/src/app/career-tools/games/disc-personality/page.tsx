@@ -293,6 +293,20 @@ export default function FilipinoDiscGame() {
   const [isGeneratingAIAssessment, setIsGeneratingAIAssessment] = useState(false);
   const [aiBpoRoles, setAiBpoRoles] = useState<any[] | null>(null);
   const [isGeneratingBpoRoles, setIsGeneratingBpoRoles] = useState(false);
+  const [expandedRoles, setExpandedRoles] = useState<Set<number>>(new Set());
+  
+  // Toggle role explanation
+  const toggleRoleExplanation = (index: number) => {
+    setExpandedRoles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
   
   // Music selection state
   const [musicLanguage, setMusicLanguage] = useState<'maledisc' | 'femaledisc'>('maledisc');
@@ -765,27 +779,58 @@ export default function FilipinoDiscGame() {
     try {
       console.log('💼 Generating AI BPO roles for user:', user.id);
       
+      // First, fetch actual jobs from the job-matching API
+      let actualJobs: any[] = [];
+      try {
+        const jobsResponse = await fetch('/api/public/jobs?pageSize=20&status=active');
+        if (jobsResponse.ok) {
+          const jobsData = await jobsResponse.json();
+          actualJobs = jobsData.items || [];
+          console.log('📋 Fetched actual jobs:', actualJobs.length);
+        }
+      } catch (jobError) {
+        console.error('Error fetching jobs:', jobError);
+      }
+      
       // Get user's current position from user metadata or profile
       const currentPosition = user.user_metadata?.position || user.user_metadata?.current_position || 'Not specified';
       const currentExperience = user.user_metadata?.bio || 'No bio available';
       const location = user.user_metadata?.location || 'Philippines';
       
-      const bpoRolesPrompt = `You are an expert BPO career consultant. Based on this candidate's DISC personality and current position, recommend 4 suitable BPO job titles.
+      // Create a list of available job titles from actual jobs
+      const availableJobTitles = actualJobs.map(job => job.job_title).filter(Boolean);
+      const jobTitlesList = availableJobTitles.length > 0 ? availableJobTitles.join(', ') : 'Customer Service Representative, Technical Support Specialist, Quality Assurance Analyst, Team Lead';
+      
+      const bpoRolesPrompt = `You are an expert BPO career consultant. Based on this candidate's DISC personality and current position, recommend 4 suitable BPO job titles from the available jobs.
 
 CANDIDATE:
 - Current Position: ${currentPosition}
 - Primary DISC Type: ${results.primaryType} (${results.scores[results.primaryType]}%)
 - Secondary Type: ${results.secondaryType} (${results.scores[results.secondaryType]}%)
 
-Return ONLY a JSON array of exactly 4 job titles:
+AVAILABLE JOB TITLES: ${jobTitlesList}
+
+Return ONLY a JSON array of exactly 4 job recommendations with explanations:
 [
-  {"title": "Customer Experience Specialist"},
-  {"title": "Quality Assurance Analyst"},
-  {"title": "Team Lead - Technical Support"},
-  {"title": "Data Analytics Specialist"}
+  {
+    "title": "Customer Experience Specialist",
+    "explanation": "Your high Influence scores show natural people skills and communication abilities that make you perfect for customer-facing roles where you can build relationships and solve problems."
+  },
+  {
+    "title": "Quality Assurance Analyst", 
+    "explanation": "Your Conscientiousness traits indicate attention to detail and systematic thinking, ideal for ensuring quality standards and process improvement."
+  },
+  {
+    "title": "Team Lead - Technical Support",
+    "explanation": "Your balanced Dominance and Steadiness scores suggest leadership potential combined with reliability, perfect for guiding technical teams."
+  },
+  {
+    "title": "Data Analytics Specialist",
+    "explanation": "Your analytical Conscientiousness nature aligns with data-driven roles where precision and systematic analysis are crucial."
+  }
 ]
 
-Focus on real BPO roles in the Philippines that match their personality and experience level.`;
+Focus on real BPO roles in the Philippines that match their personality and experience level. Provide specific explanations for why each role suits their DISC personality type.`;
 
       const response = await fetch('/api/games/disc/personalized', {
         method: 'POST',
@@ -812,49 +857,121 @@ Focus on real BPO roles in the Philippines that match their personality and expe
             console.log('✅ AI BPO roles generated:', generatedRoles.length);
           } catch (parseError) {
             console.error('Error parsing BPO roles JSON:', parseError);
-            // Fallback to default roles
+            // Fallback to default roles with explanations
             generatedRoles = [
-              { title: "Customer Service Representative" },
-              { title: "Technical Support Specialist" },
-              { title: "Quality Assurance Analyst" },
-              { title: "Team Lead" }
+              { 
+                title: "Customer Service Representative",
+                explanation: `Your ${results.primaryType === 'I' ? 'high Influence' : results.primaryType === 'S' ? 'steady and reliable' : results.primaryType === 'C' ? 'analytical and detail-oriented' : 'decisive and results-focused'} personality makes you excellent at helping customers and building relationships.`
+              },
+              { 
+                title: "Technical Support Specialist",
+                explanation: `Your ${results.primaryType === 'C' ? 'systematic approach' : results.primaryType === 'S' ? 'patient nature' : results.primaryType === 'D' ? 'problem-solving skills' : 'communication abilities'} is perfect for troubleshooting and technical assistance.`
+              },
+              { 
+                title: "Quality Assurance Analyst",
+                explanation: `Your ${results.primaryType === 'C' ? 'attention to detail' : results.primaryType === 'S' ? 'methodical approach' : results.primaryType === 'D' ? 'results focus' : 'people skills'} ensures quality standards are met consistently.`
+              },
+              { 
+                title: "Team Lead",
+                explanation: `Your ${results.primaryType === 'D' ? 'natural leadership' : results.primaryType === 'I' ? 'people skills' : results.primaryType === 'S' ? 'reliability' : 'analytical thinking'} makes you an effective team leader.`
+              }
             ];
           }
         } else {
           console.error('No JSON found in BPO roles response');
           generatedRoles = [
-            { title: "Customer Service Representative" },
-            { title: "Technical Support Specialist" },
-            { title: "Quality Assurance Analyst" },
-            { title: "Team Lead" }
+            { 
+              title: "Customer Service Representative",
+              explanation: `Your ${results.primaryType === 'I' ? 'high Influence' : results.primaryType === 'S' ? 'steady and reliable' : results.primaryType === 'C' ? 'analytical and detail-oriented' : 'decisive and results-focused'} personality makes you excellent at helping customers and building relationships.`
+            },
+            { 
+              title: "Technical Support Specialist",
+              explanation: `Your ${results.primaryType === 'C' ? 'systematic approach' : results.primaryType === 'S' ? 'patient nature' : results.primaryType === 'D' ? 'problem-solving skills' : 'communication abilities'} is perfect for troubleshooting and technical assistance.`
+            },
+            { 
+              title: "Quality Assurance Analyst",
+              explanation: `Your ${results.primaryType === 'C' ? 'attention to detail' : results.primaryType === 'S' ? 'methodical approach' : results.primaryType === 'D' ? 'results focus' : 'people skills'} ensures quality standards are met consistently.`
+            },
+            { 
+              title: "Team Lead",
+              explanation: `Your ${results.primaryType === 'D' ? 'natural leadership' : results.primaryType === 'I' ? 'people skills' : results.primaryType === 'S' ? 'reliability' : 'analytical thinking'} makes you an effective team leader.`
+            }
           ];
         }
       } else {
-        // Fallback roles based on DISC type
+        // Fallback roles based on DISC type with explanations
         const discBasedRoles = {
           'D': [
-            { title: "Team Lead - Operations" },
-            { title: "Quality Assurance Supervisor" },
-            { title: "Training Manager" },
-            { title: "Customer Experience Manager" }
+            { 
+              title: "Team Lead - Operations",
+              explanation: "Your natural Dominance traits make you a born leader who can drive results and motivate teams to achieve operational excellence."
+            },
+            { 
+              title: "Quality Assurance Supervisor",
+              explanation: "Your decisive nature and results focus make you perfect for overseeing quality standards and ensuring compliance."
+            },
+            { 
+              title: "Training Manager",
+              explanation: "Your leadership abilities and direct communication style make you effective at developing and training team members."
+            },
+            { 
+              title: "Customer Experience Manager",
+              explanation: "Your results-oriented approach and decision-making skills help you drive customer satisfaction and business outcomes."
+            }
           ],
           'I': [
-            { title: "Customer Experience Specialist" },
-            { title: "Training and Development" },
-            { title: "Team Lead - Customer Support" },
-            { title: "Sales Representative" }
+            { 
+              title: "Customer Experience Specialist",
+              explanation: "Your high Influence scores show natural people skills and enthusiasm that create positive customer interactions."
+            },
+            { 
+              title: "Training and Development",
+              explanation: "Your people-oriented nature and communication skills make you excellent at teaching and developing others."
+            },
+            { 
+              title: "Team Lead - Customer Support",
+              explanation: "Your social skills and ability to connect with people make you an effective leader in customer-facing roles."
+            },
+            { 
+              title: "Sales Representative",
+              explanation: "Your persuasive nature and optimistic attitude make you naturally suited for sales and relationship building."
+            }
           ],
           'S': [
-            { title: "Technical Support Specialist" },
-            { title: "Data Entry Specialist" },
-            { title: "Customer Service Representative" },
-            { title: "Quality Assurance Analyst" }
+            { 
+              title: "Technical Support Specialist",
+              explanation: "Your patient and steady nature makes you excellent at providing consistent, reliable technical assistance."
+            },
+            { 
+              title: "Data Entry Specialist",
+              explanation: "Your methodical approach and attention to detail ensure accurate and consistent data processing."
+            },
+            { 
+              title: "Customer Service Representative",
+              explanation: "Your reliable and team-oriented nature makes you a dependable customer service professional."
+            },
+            { 
+              title: "Quality Assurance Analyst",
+              explanation: "Your consistent and systematic approach ensures quality standards are maintained across all processes."
+            }
           ],
           'C': [
-            { title: "Data Analytics Specialist" },
-            { title: "Quality Assurance Analyst" },
-            { title: "Technical Documentation" },
-            { title: "Process Improvement Specialist" }
+            { 
+              title: "Data Analytics Specialist",
+              explanation: "Your analytical thinking and attention to detail make you perfect for interpreting data and finding insights."
+            },
+            { 
+              title: "Quality Assurance Analyst",
+              explanation: "Your systematic approach and high standards ensure quality compliance and process improvement."
+            },
+            { 
+              title: "Technical Documentation",
+              explanation: "Your detail-oriented nature and systematic thinking make you excellent at creating accurate technical documentation."
+            },
+            { 
+              title: "Process Improvement Specialist",
+              explanation: "Your analytical skills and systematic approach help identify and implement process optimizations."
+            }
           ]
         };
         generatedRoles = discBasedRoles[results.primaryType as keyof typeof discBasedRoles] || discBasedRoles['I'];
@@ -868,10 +985,22 @@ Focus on real BPO roles in the Philippines that match their personality and expe
     } catch (error) {
       console.error('❌ AI BPO roles generation failed:', error);
       const fallbackRoles = [
-        { title: "Customer Service Representative" },
-        { title: "Technical Support Specialist" },
-        { title: "Quality Assurance Analyst" },
-        { title: "Team Lead" }
+        { 
+          title: "Customer Service Representative",
+          explanation: `Your ${results.primaryType === 'I' ? 'high Influence' : results.primaryType === 'S' ? 'steady and reliable' : results.primaryType === 'C' ? 'analytical and detail-oriented' : 'decisive and results-focused'} personality makes you excellent at helping customers and building relationships.`
+        },
+        { 
+          title: "Technical Support Specialist",
+          explanation: `Your ${results.primaryType === 'C' ? 'systematic approach' : results.primaryType === 'S' ? 'patient nature' : results.primaryType === 'D' ? 'problem-solving skills' : 'communication abilities'} is perfect for troubleshooting and technical assistance.`
+        },
+        { 
+          title: "Quality Assurance Analyst",
+          explanation: `Your ${results.primaryType === 'C' ? 'attention to detail' : results.primaryType === 'S' ? 'methodical approach' : results.primaryType === 'D' ? 'results focus' : 'people skills'} ensures quality standards are met consistently.`
+        },
+        { 
+          title: "Team Lead",
+          explanation: `Your ${results.primaryType === 'D' ? 'natural leadership' : results.primaryType === 'I' ? 'people skills' : results.primaryType === 'S' ? 'reliability' : 'analytical thinking'} makes you an effective team leader.`
+        }
       ];
       setAiBpoRoles(fallbackRoles);
       return fallbackRoles;
@@ -2000,15 +2129,33 @@ Make it deeply personal and actionable based on their actual choices.`;
                     </div>
                   ) : aiBpoRoles && aiBpoRoles.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Brain className="h-5 w-5 text-cyan-400" />
-                        <span className="text-sm text-cyan-300">Personalized for your {user?.user_metadata?.position || 'background'}</span>
-                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {aiBpoRoles.map((role: any, index: number) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                            <Briefcase className="h-5 w-5 text-cyan-400" />
-                            <span className="text-white">{role.title}</span>
+                          <div key={index} className="bg-white/5 rounded-lg overflow-hidden">
+                            <div 
+                              className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/10 transition-colors"
+                              onClick={() => toggleRoleExplanation(index)}
+                            >
+                              <Briefcase className="h-5 w-5 text-cyan-400" />
+                              <span className="text-white flex-1">{role.title}</span>
+                              <ChevronDown 
+                                className={`h-4 w-4 text-cyan-400 transition-transform ${
+                                  expandedRoles.has(index) ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </div>
+                            {expandedRoles.has(index) && role.explanation && (
+                              <div className="px-3 pb-3">
+                                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-cyan-400 text-sm">💡</span>
+                                    <p className="text-cyan-200 text-sm leading-relaxed">
+                                      {role.explanation}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

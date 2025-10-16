@@ -5078,7 +5078,12 @@ export default function TypingHeroPage() {
                         <p className="text-2xl font-bold text-yellow-300 mb-1">
                           {Math.round(gameStats.burstWPM * 0.8)}-{Math.round(gameStats.wpm * 1.2)} WPM
                         </p>
-                        <p className="text-gray-400 text-sm">Expected performance on standard typing tests</p>
+                        <p className="text-gray-400 text-sm">
+                          {gameStats.wpm >= 60 ? "Professional typing speed - excellent for BPO roles" :
+                           gameStats.wpm >= 40 ? "Good typing speed - suitable for most office work" :
+                           gameStats.wpm >= 25 ? "Developing speed - practice will improve performance" :
+                           "Beginner level - focus on accuracy first, then speed"}
+                        </p>
                       </motion.div>
                           </motion.div>
                         )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/database'
+import { capitalizeNames, capitalizeFullName } from '@/lib/name-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
       phone = null,
       bio = null
     } = body
+
+    // Capitalize names before processing
+    const capitalizedNames = capitalizeNames(first_name, last_name);
+    const capitalizedFullName = capitalizeFullName(full_name);
 
     // Validate required fields
     if (!id || !email || !first_name || !last_name) {
@@ -98,7 +103,7 @@ export async function POST(request: NextRequest) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *`,
       [
-        id, email, first_name, last_name, full_name,
+        id, email, capitalizedNames.firstName, capitalizedNames.lastName, capitalizedFullName,
         location, avatar_url, phone, bio,
         'recruiter', false
       ]
