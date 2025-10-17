@@ -2038,7 +2038,7 @@ export function PricingCalculatorModal({ isOpen, onClose }: PricingCalculatorMod
                     className="border-lime-300 text-lime-700 hover:bg-lime-50 px-8 py-3"
                     disabled={isSaving}
                   >
-                    Start Over
+                    No Thanks
                   </Button>
                 </div>
               </div>
@@ -2178,11 +2178,11 @@ export function PricingCalculatorModal({ isOpen, onClose }: PricingCalculatorMod
               variant="destructive"
               onClick={() => {
                 setShowStartOverAlert(false);
-                resetForm();
+                onClose();
               }}
               className="flex-1"
             >
-              Yes, Start Over
+              Close the pricing quote
             </Button>
           </div>
         </DialogContent>

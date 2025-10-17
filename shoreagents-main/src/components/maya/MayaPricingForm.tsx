@@ -785,35 +785,48 @@ export const MayaPricingForm = ({
   }
   if (currentStep === 'candidateConfirmation') {
     return (
-      <div key="candidate-confirmation-step" className="flex justify-start mb-4">
-        <div className="max-w-[80%]">
-          <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-800 mb-2">
-                  Ready to see your candidates?
-                </h3>
-                <p className="text-xs text-gray-600 mb-4">
-                  I'll search our talent database to find the best professionals that match your specific requirements.
-                </p>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleCandidateConfirmation(true)}
-                  size="sm"
-                  className="bg-lime-600 hover:bg-lime-700 text-white"
-                >
-                  Yes, Show Candidates
-                </Button>
-                <Button
-                  onClick={() => handleCandidateConfirmation(false)}
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-600"
-                >
-                  Not Now
-                </Button>
+      <div key="candidate-confirmation-step" className="space-y-4">
+        {/* Show pricing summary first */}
+        <MayaPricingSummaryCard
+          formData={formData}
+          onConfirm={handleSummaryConfirm}
+          onEdit={handleSummaryEdit}
+          setMessages={setMessages}
+          generateMessageId={generateMessageId}
+          showCandidateMessage={false} // Don't show the candidate message since we're showing confirmation
+        />
+        
+        {/* Then show the candidate confirmation */}
+        <div className="flex justify-start mb-4">
+          <div className="max-w-[80%]">
+            <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-800 mb-2">
+                    Ready to see your candidates?
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-4">
+                    I'll search our talent database to find the best professionals that match your specific requirements.
+                  </p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleCandidateConfirmation(true)}
+                    size="sm"
+                    className="bg-lime-600 hover:bg-lime-700 text-white"
+                  >
+                    Yes, Show Candidates
+                  </Button>
+                  <Button
+                    onClick={() => handleCandidateConfirmation(false)}
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-600"
+                  >
+                    Not Now
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

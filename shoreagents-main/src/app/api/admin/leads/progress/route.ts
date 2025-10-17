@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { UserType } from '@/types/user'
 
 const prisma = new PrismaClient()
 
+// GET /api/admin/leads/progress - Get all users with their current lead status
 export async function GET(request: NextRequest) {
   try {
-    // Get all users with their latest lead progress using Prisma
+    // Get all users with their latest lead progress
     const usersWithProgress = await prisma.user.findMany({
-      where: {
-        user_type: {
-          not: 'Admin'
-        }
-      },
       include: {
         leadProgress: {
           orderBy: { created_at: 'desc' },
@@ -50,22 +45,14 @@ export async function GET(request: NextRequest) {
         priority = 'Medium'
       }
 
-      // Determine source based on user data
-      let source = 'Website'
-      if (user.company) {
-        source = user.company
-      } else if (user.email && user.email.includes('@')) {
-        source = 'Email Signup'
-      }
-
       return {
         id: user.user_id,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Anonymous User',
-        company: user.company || 'Not specified',
-        email: user.email || 'No email provided',
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown',
+        company: user.company || 'Unknown Company',
+        email: user.email || 'No email',
         status: statusMap[currentStatus] || 'New Lead',
         priority,
-        source,
+        source: user.user_type === 'Regular' ? 'Website' : 'Anonymous',
         created: user.created_at?.toISOString() || new Date().toISOString(),
         lastContact: user.updated_at?.toISOString() || new Date().toISOString(),
         notes: '',
@@ -73,7 +60,7 @@ export async function GET(request: NextRequest) {
         userType: user.user_type,
         userId: user.user_id,
         quoteCount: user.pricingQuotes.length,
-        industry: user.industry_name || 'Not specified',
+        industry: user.industry_name || 'Unknown',
         firstLeadCapture: user.first_lead_capture || false,
         secondLeadCapture: user.second_lead_capture || false,
         thirdLeadCapture: user.third_lead_capture || false
@@ -91,73 +78,64 @@ export async function GET(request: NextRequest) {
       closed_won: leads.filter(lead => lead.column === 'closed_won').length
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: leads,
-      total: leads.length,
-      stats
+      stats,
+      total: leads.length
     })
 
   } catch (error) {
-    console.error('Error in leads API:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error fetching leads with progress:', error)
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to fetch leads with progress' 
+    }, { status: 500 })
   }
 }
 
-export async function PUT(request: NextRequest) {
+// POST /api/admin/leads/progress - Update lead status
+export async function POST(request: NextRequest) {
   try {
-    const { leadId, column, changedBy, changeReason } = await request.json()
-    
-    console.log('🔄 API: Updating lead status:', { leadId, column, changedBy, changeReason })
+    const { userId, status, changedBy, changeReason } = await request.json()
 
-    if (!leadId || !column) {
-      console.log('❌ API: Missing required fields')
-      return NextResponse.json({ error: 'Lead ID and column are required' }, { status: 400 })
+    if (!userId || !status) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User ID and status are required' 
+      }, { status: 400 })
     }
 
-    // Check if user already has a progress record
-    const existingProgress = await prisma.leadProgress.findFirst({
-      where: { user_id: leadId },
+    // Get the current status for this user
+    const currentProgress = await prisma.leadProgress.findFirst({
+      where: { user_id: userId },
       orderBy: { created_at: 'desc' }
     })
 
-    let updatedProgress
+    const previousStatus = currentProgress?.status || null
 
-    if (existingProgress) {
-      // Update existing record
-      updatedProgress = await prisma.leadProgress.update({
-        where: { id: existingProgress.id },
-        data: {
-          previous_status: existingProgress.status, // Store old status as previous
-          status: column, // Update to new status
-          changed_by: changedBy || null,
-          change_reason: changeReason || null,
-          created_at: new Date() // Update timestamp
-        }
-      })
-      console.log('✅ API: Updated existing lead status:', updatedProgress)
-    } else {
-      // Create new record only if none exists
-      updatedProgress = await prisma.leadProgress.create({
-        data: {
-          user_id: leadId,
-          status: column,
-          previous_status: null,
-          changed_by: changedBy || null,
-          change_reason: changeReason || null
-        }
-      })
-      console.log('✅ API: Created new lead status:', updatedProgress)
-    }
+    // Create new progress record
+    const newProgress = await prisma.leadProgress.create({
+      data: {
+        user_id: userId,
+        status,
+        previous_status: previousStatus,
+        changed_by: changedBy || null,
+        change_reason: changeReason || null
+      }
+    })
 
-    return NextResponse.json({ 
-      success: true, 
-      data: updatedProgress,
-      message: 'Lead status updated successfully' 
+    return NextResponse.json({
+      success: true,
+      data: newProgress,
+      message: 'Lead status updated successfully'
     })
 
   } catch (error) {
-    console.error('Error updating lead:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error updating lead status:', error)
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to update lead status' 
+    }, { status: 500 })
   }
 }

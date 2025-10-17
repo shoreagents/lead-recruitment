@@ -578,13 +578,23 @@ const fetchLeads = async (): Promise<LeadsResponse> => {
   return response.json();
 };
 
-const updateLeadStatus = async ({ leadId, column }: { leadId: string; column: string }): Promise<{ success: boolean; message: string }> => {
+const updateLeadStatus = async ({ 
+  leadId, 
+  column, 
+  changedBy, 
+  changeReason 
+}: { 
+  leadId: string; 
+  column: string; 
+  changedBy?: string; 
+  changeReason?: string; 
+}): Promise<{ success: boolean; message: string }> => {
   const response = await fetch('/api/admin/leads', {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ leadId, column }),
+    body: JSON.stringify({ leadId, column, changedBy, changeReason }),
   });
   
   if (!response.ok) {
