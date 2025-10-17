@@ -135,33 +135,33 @@ function HomePageContent() {
   const testimonialsData = [
     {
       name: 'Lainie',
-      avatar: '/images/testimonials/lainie.png',
+      avatar: '/images/testimonials/Lainie.png',
       text: 'A great place to work. Work-life balance, we only work 5 days a week, co-employees are friendly and have a healthy environment.'
     },
     {
       name: 'Rikki',
-      avatar: '/images/testimonials/rikki.png',
+      avatar: '/images/testimonials/Rikki.png',
       text: 'ShoreAgents is an excellent company for those seeking a healthy work-life balance. There are numerous activities and treats that you will undoubtedly appreciate. ShoreAgents will assist you in growing and stepping beyond of your comfort zone. Strongly recommended! ❤️'
     },
     {
       name: 'Dana',
-      avatar: '/images/testimonials/dana.png',
+      avatar: '/images/testimonials/Dana.png',
       text: 'This is not only a company but it is a family, They are truly heart warming, happy environment plus lots of fun activities that they make sure that you have the work life balance! I really recommend everyone to apply in ShoreAgents and experience the happiness!'
     },
     {
       name: 'Arra',
-      avatar: '/images/testimonials/arra.png',
+      avatar: '/images/testimonials/Arra.png',
       text: 'I enjoy working in the company; people are good, there are lots of goodies, and they encourage you to do better and work outside your comfort zone. 🥰🥰🥰'
     },
     {
       name: 'Kevin',
-      avatar: '/images/testimonials/kevin.png',
-      text: 'Highly recommended! Admins are very nice and approachable. They give out free pizza, burgers, cupcakes, and more every now and then to make sure staff’s are appreciated. Good working environment too.'
+      avatar: '/images/testimonials/Kevin.png',
+      text: 'Highly recommended! Admins are very nice and approachable. They give out free pizza, burgers, cupcakes, and more every now and then to make sure staff\'s are appreciated. Good working environment too.'
     },
     {
       name: 'Crizza',
-      avatar: '/images/testimonials/crizza.png',
-      text: 'This is a less stress workplace, you only have 8-9 hours of stress, 5 days of the week—work life balance—a place where you can enhance your knowledge and grow your skills while also having fun ’cause there are goodies and games! So rare to find those nowadays.'
+      avatar: '/images/testimonials/Crizza.png',
+      text: 'This is a less stress workplace, you only have 8-9 hours of stress, 5 days of the week—work life balance—a place where you can enhance your knowledge and grow your skills while also having fun \'cause there are goodies and games! So rare to find those nowadays.'
     }
   ]
   const itemsPerView = 3

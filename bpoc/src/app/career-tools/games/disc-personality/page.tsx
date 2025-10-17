@@ -295,11 +295,6 @@ export default function FilipinoDiscGame() {
   const [isGeneratingBpoRoles, setIsGeneratingBpoRoles] = useState(false);
   const [expandedRoles, setExpandedRoles] = useState<Set<number>>(new Set());
   
-  // Resume check state
-  const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
-  const [hasResume, setHasResume] = useState<boolean | null>(null);
-  const [checkingResume, setCheckingResume] = useState(false);
-  
   // Toggle role explanation
   const toggleRoleExplanation = (index: number) => {
     setExpandedRoles(prev => {
@@ -653,74 +648,11 @@ export default function FilipinoDiscGame() {
     }
   }, [user, gameState.gameStarted, gameState.userProfile]);
 
-  // Check if user has a saved resume
-  const checkUserResume = useCallback(async () => {
-    console.log('🔍 DISC checkUserResume: Starting check for user:', user?.id);
-    
-    if (!user?.id) {
-      console.log('❌ DISC checkUserResume: No user ID found');
-      setHasResume(false);
-      return false;
-    }
-
-    setCheckingResume(true);
-    try {
-      console.log('🔑 DISC checkUserResume: Getting session token...');
-      // Get the session token for authentication
-      const token = await (await import('@/lib/auth-helpers')).getSessionToken();
-      console.log('🎫 DISC checkUserResume: Token obtained:', !!token);
-      
-      console.log('📡 DISC checkUserResume: Fetching saved resumes...');
-      const response = await fetch('/api/user/saved-resumes', {
-        headers: {
-          'x-user-id': String(user.id),
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        cache: 'no-store'
-      });
-
-      console.log('📊 DISC checkUserResume: Response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📄 DISC checkUserResume: Response data:', data);
-        const hasResumeData = data?.success && data?.hasSavedResume;
-        console.log('✅ DISC checkUserResume: Has resume:', hasResumeData);
-        setHasResume(hasResumeData);
-        return hasResumeData;
-      } else {
-        console.log('❌ DISC checkUserResume: Response not OK');
-        const errorText = await response.text();
-        console.log('❌ DISC checkUserResume: Error response:', errorText);
-        setHasResume(false);
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ DISC checkUserResume: Error:', error);
-      setHasResume(false);
-      return false;
-    } finally {
-      setCheckingResume(false);
-      console.log('🏁 DISC checkUserResume: Check complete');
-    }
-  }, [user?.id]);
-
-  // Check for saved resume on page load
-  useEffect(() => {
-    if (user?.id) {
-      console.log('🔍 DISC: Checking for saved resume on page load...');
-      checkUserResume();
-    }
-  }, [user?.id, checkUserResume]);
-
-  const startGame = async () => {
-    console.log('🎮 DISC: Starting game...');
-    
+  const startGame = () => {
     // Stop any preview that's playing
     stopPreview();
     
     if (!user) {
-      console.log('❌ DISC: No user found, triggering signup');
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.set('signup', 'true');
@@ -729,42 +661,11 @@ export default function FilipinoDiscGame() {
       }
     }
     
-    try {
-      // Check if user has a saved resume first (use cached value for instant response)
-      if (hasResume === false) {
-        console.log('⚠️ DISC: No resume found (cached), showing modal');
-        setShowResumeRequiredModal(true);
-        return;
-      }
-      
-      // If we haven't checked yet, check now
-      if (hasResume === null) {
-        console.log('🔍 DISC: Checking user resume (not cached yet)...');
-        const hasResumeData = await checkUserResume();
-        console.log('📝 DISC: Resume check result:', hasResumeData);
-        
-        if (!hasResumeData) {
-          console.log('⚠️ DISC: No resume found, showing modal');
-          setShowResumeRequiredModal(true);
-          return;
-        }
-      }
-      
-      console.log('✅ DISC: Resume found, starting game!');
-      setGameState(prev => ({ 
-        ...prev, 
-        gameStarted: true,
-        sessionStartTime: new Date()
-      }));
-    } catch (error) {
-      console.error('❌ DISC: Error in startGame:', error);
-      // If there's an error checking resume, allow game to start anyway
-      setGameState(prev => ({ 
-        ...prev, 
-        gameStarted: true,
-        sessionStartTime: new Date()
-      }));
-    }
+    setGameState(prev => ({ 
+      ...prev, 
+      gameStarted: true,
+      sessionStartTime: new Date()
+    }));
   };
 
 
@@ -3272,57 +3173,6 @@ Make it deeply personal and actionable based on their actual choices.`;
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Resume Required Alert Dialog */}
-      <AlertDialog open={showResumeRequiredModal} onOpenChange={setShowResumeRequiredModal}>
-        <AlertDialogContent className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/20">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
-              <span className="text-3xl">📝</span>
-              Resume Required
-            </AlertDialogTitle>
-            <div className="text-gray-300 text-base mt-4 space-y-3">
-              <p>
-                Before you can start playing <span className="text-cyan-400 font-semibold">BPOC DISC</span>, 
-                you need to create your resume first!
-              </p>
-              <p className="text-sm text-gray-400">
-                Creating a resume helps us personalize your gaming experience and generate 
-                custom personality insights based on your career profile.
-              </p>
-              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4 mt-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">✨</span>
-                  <div className="space-y-1">
-                    <p className="text-cyan-400 font-semibold text-sm">Why create a resume?</p>
-                    <ul className="text-xs text-gray-400 space-y-1 ml-1">
-                      <li>• Get personalized game insights</li>
-                      <li>• Unlock all game features</li>
-                      <li>• Track your personality progress</li>
-                      <li>• Stand out to recruiters</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-3 mt-6">
-            <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
-              Maybe Later
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                setShowResumeRequiredModal(false);
-                router.push('/resume-builder');
-              }}
-              className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold border-0 shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:scale-105"
-            >
-              <span className="mr-2">🚀</span>
-              Create Resume Now
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
     </div>
   );
 }
