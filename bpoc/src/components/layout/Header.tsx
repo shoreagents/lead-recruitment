@@ -228,6 +228,10 @@ export default function Header({}: HeaderProps) {
                     const retryData = await retryResponse.json()
                     setUserProfile(retryData.user)
                   }
+                } else if (syncResponse.status === 409) {
+                  // 409 = User already exists - this is OK, just use the existing profile
+                  console.log('ℹ️ User already exists in database, using existing profile')
+                  setUserProfile(data.user)
                 } else {
                   console.error('❌ Failed to sync user name information:', syncResponse.status)
                   setUserProfile(data.user) // Still set the profile even if sync failed
@@ -314,6 +318,14 @@ export default function Header({}: HeaderProps) {
               if (syncResponse.ok) {
                 console.log('✅ User synced successfully, retrying profile fetch...')
                 // Retry fetching the profile
+                const retryResponse = await fetch(`/api/user/profile?userId=${user.id}`)
+                if (retryResponse.ok) {
+                  const retryData = await retryResponse.json()
+                  setUserProfile(retryData.user)
+                }
+              } else if (syncResponse.status === 409) {
+                // 409 = User already exists - this is OK, just fetch the profile
+                console.log('ℹ️ User already exists in database, fetching profile...')
                 const retryResponse = await fetch(`/api/user/profile?userId=${user.id}`)
                 if (retryResponse.ok) {
                   const retryData = await retryResponse.json()

@@ -1,0 +1,69 @@
+{
+  "name": "Lovell Siron",
+  "email": "lovelsiron.designs@gmail.com",
+  "phone": "+63 920 846 - 6915",
+  "location": "Pampanga, Philippines",
+  "summary": "Exploring UI/UX trends, branding, and web development to craft engaging digital experiences. Bringing ideas to life through visuals.",
+  "skills": [
+    "Creative problem-solving",
+    "Adobe Photoshop",
+    "Adobe Illustrator",
+    "Adobe Lightroom Classic",
+    "Canva",
+    "Figma",
+    "Adobe XD",
+    "Adobe Premiere Pro",
+    "Basic HTML/CSS",
+    "Basic JavaScript"
+  ],
+  "experience": [
+    {
+      "company": "ShoreAgents",
+      "position": "Graphic Designer",
+      "duration": "July 2022 - Present",
+      "description": "Designed and developed visual assets for social media, websites, email campaigns, eBooks, and other marketing materials. Collaborated closely with the CEO and web developers to enhance brand identity and digital presence. Created engaging graphics to support marketing strategies and improve audience engagement."
+    },
+    {
+      "company": "Freelance",
+      "position": "Graphic Designer",
+      "duration": "August 2023 - Present",
+      "description": "Designed marketing ads and social media graphics for platforms like Facebook and Instagram. Developed brand boards and cohesive visual identities to strengthen brand consistency."
+    }
+  ],
+  "education": [
+    {
+      "institution": "Holy Angel University",
+      "degree": "Bachelor of Science in Information Technology",
+      "major": "Web Development",
+      "year": "June 2022"
+    }
+  ],
+  "organizations": [
+    {
+      "role": "Head of Creative and Multimedia Arts Team | Councilor",
+      "organization": "School of Computing Student Council - Holy Angel University",
+      "duration": "August 2020 - April 2021",
+      "description": "Created publication materials for the council’s social media. Designed graphics for events, including posters and teasers."
+    },
+    {
+      "role": "Head of Media Arts Team | Senator",
+      "organization": "University Student Council - Holy Angel University",
+      "duration": "August 2019 - April 2020",
+      "description": "Led the creation of publication materials across different media platforms. Designed event graphics for the university to ensure high-quality visual content."
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Foundations of User Experience (UX) Design",
+      "issuer": "Google",
+      "issued_date": "February 2024"
+    }
+  ],
+  "reference": {
+    "name": "James Dulinayan",
+    "position": "Web Developer at ShoreAgents",
+    "email": "james.d@shoreagents.com",
+    "phone": "+63 956 362 - 0905"
+  },
+  "interests": "the art of making art"
+}
