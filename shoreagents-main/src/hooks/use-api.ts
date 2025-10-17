@@ -239,7 +239,8 @@ export const useUserFormStatus = (userId: string) => {
     queryKey: ['userFormStatus', userId],
     queryFn: () => fetchUserFormStatus(userId),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds (reduced from 5 minutes)
+    gcTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 
@@ -293,8 +294,8 @@ export const useAutocompleteSuggestions = (
       generationCount
     }),
     enabled: enabled && query.length >= 2, // Only fetch if query is 2 or more characters
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 1000, // 30 seconds (reduced from 5 minutes)
+    gcTime: 2 * 60 * 1000, // 2 minutes (reduced from 10 minutes)
     refetchOnWindowFocus: false, // Prevent refetch on window focus
     retry: 1, // Only retry once on failure
     retryDelay: 2000, // Wait 2 seconds before retry
@@ -394,12 +395,12 @@ export const useBPOCEmployeeData = () => {
   return useQuery({
     queryKey: ['bpoc-employees'],
     queryFn: fetchBPOCEmployeeData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 3, // Retry failed requests 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes)
+    gcTime: 3 * 60 * 1000, // 3 minutes (reduced from 10 minutes)
+    retry: 2, // Retry failed requests 2 times (reduced from 3)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Max 5 seconds (reduced from 30)
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: true, // Refetch on component mount
+    refetchOnMount: false, // Don't refetch on component mount (changed from true)
   });
 };
 
@@ -415,10 +416,10 @@ export const useBPOCEmployeeById = (employeeId: string) => {
       return employee;
     },
     enabled: !!employeeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 3, // Retry failed requests 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes)
+    gcTime: 3 * 60 * 1000, // 3 minutes (reduced from 10 minutes)
+    retry: 2, // Retry failed requests 2 times (reduced from 3)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Max 5 seconds (reduced from 30)
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
@@ -498,10 +499,10 @@ export const useEmployeeCardData = () => {
   return useQuery<EmployeeCardData[]>({
     queryKey: ['employee-card-data'],
     queryFn: fetchEmployeeCardData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 3, // Retry failed requests 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes)
+    gcTime: 3 * 60 * 1000, // 3 minutes (reduced from 10 minutes)
+    retry: 2, // Retry failed requests 2 times (reduced from 3)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Max 5 seconds (reduced from 30)
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
@@ -608,8 +609,9 @@ export const useLeads = () => {
   return useQuery<LeadsResponse>({
     queryKey: ['leads'],
     queryFn: fetchLeads,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced from 2 minutes)
+    gcTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes)
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
 
@@ -621,6 +623,95 @@ export const useUpdateLeadStatus = () => {
     onSuccess: () => {
       // Invalidate and refetch leads data
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+};
+
+// User Profile Hooks
+interface UserProfile {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  company: string | null;
+  email: string | null;
+  created_at: Date | null;
+  updated_at: Date | null;
+  auth_user_id: string | null;
+  user_type: string;
+  industry_name: string | null;
+  first_lead_capture: boolean | null;
+  second_lead_capture: boolean | null;
+  third_lead_capture: boolean | null;
+  quoteCount: number;
+}
+
+interface UpdateUserProfileData {
+  user_id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  company?: string;
+  industry_name?: string;
+}
+
+const fetchUserProfile = async (userId: string): Promise<UserProfile> => {
+  const response = await fetch(`/api/user/profile?user_id=${userId}`);
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile');
+  }
+  
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to fetch user profile');
+  }
+  
+  return result.data;
+};
+
+const updateUserProfile = async (data: UpdateUserProfileData): Promise<UserProfile> => {
+  const response = await fetch('/api/user/profile', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to update user profile');
+  }
+  
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to update user profile');
+  }
+  
+  return result.data;
+};
+
+export const useUserProfile = (userId: string) => {
+  return useQuery<UserProfile>({
+    queryKey: ['userProfile', userId],
+    queryFn: () => fetchUserProfile(userId),
+    enabled: !!userId,
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced from 5 minutes)
+    gcTime: 2 * 60 * 1000, // 2 minutes (reduced from 10 minutes)
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+  });
+};
+
+export const useUpdateUserProfile = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateUserProfile,
+    onSuccess: (data) => {
+      // Invalidate and refetch user profile data
+      queryClient.invalidateQueries({ queryKey: ['userProfile', data.user_id] });
     },
   });
 };
