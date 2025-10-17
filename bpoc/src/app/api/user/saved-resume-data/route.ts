@@ -29,11 +29,13 @@ export async function GET(request: NextRequest) {
       if (result.rows.length > 0) {
         const resumeData = result.rows[0].resume_data
         return NextResponse.json({ 
+          success: true,
           hasData: true, 
           resumeData 
         })
       } else {
         return NextResponse.json({ 
+          success: false,
           hasData: false, 
           message: 'No saved resume found' 
         })
