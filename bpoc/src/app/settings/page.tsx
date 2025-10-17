@@ -381,9 +381,6 @@ export default function SettingsPage() {
     if (!user) return
 
     try {
-      setSaveStatus('saving')
-      setErrorMessage('')
-
       console.log('💾 Starting profile save process...')
       console.log('📋 Profile data to save:', profileData)
 
@@ -414,45 +411,24 @@ export default function SettingsPage() {
 
       if (railwayResponse.ok) {
         console.log('✅ Railway and Supabase update successful')
-        setSaveStatus('success')
-        setErrorMessage('')
         
-        // Refresh user data to ensure UI reflects latest changes
-        try {
-          await refreshUser()
-          console.log('✅ User data refreshed after profile update')
-        } catch (error) {
-          console.error('❌ Failed to refresh user data:', error)
-        }
-        
-        // If username changed, redirect to new profile URL
+        // If username changed, redirect to new profile URL immediately
         if (profileData.username && profileData.username !== user.user_metadata?.username) {
           console.log('🔄 Username changed, redirecting to new profile URL...')
-          // Small delay to ensure save is complete, then redirect
-          setTimeout(() => {
-            window.location.href = `/${profileData.username}`
-          }, 500)
+          window.location.href = `/${profileData.username}`
+        } else {
+          // If no username change, just reload the current page
+          window.location.reload()
         }
-        
-        // Show success message briefly
-        setTimeout(() => {
-          setSaveStatus('idle')
-        }, 2000)
-        
-        // Refresh header by triggering a custom event
-        window.dispatchEvent(new CustomEvent('profileUpdated'))
       } else {
         const railwayError = await railwayResponse.json()
         console.error('❌ Railway update failed:', railwayError)
-        setSaveStatus('error')
-        setErrorMessage(`Railway update failed: ${railwayError.error}`)
+        alert(`Failed to save profile: ${railwayError.error}`)
       }
 
     } catch (error) {
       console.error('❌ Error saving profile:', error)
-      setSaveStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to save profile')
-      setTimeout(() => setSaveStatus('idle'), 5000)
+      alert('Failed to save profile. Please try again.')
     }
   }
 
@@ -934,27 +910,12 @@ export default function SettingsPage() {
                 />
               </div>
               
-              {/* Save Status */}
-              {saveStatus === 'success' && (
-                <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-green-400">Profile updated successfully!</span>
-                </div>
-              )}
-              
-              {saveStatus === 'error' && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <XCircle className="w-5 h-5 text-red-400" />
-                  <span className="text-red-400">Error: {errorMessage}</span>
-                </div>
-              )}
               
               <div className="flex justify-between items-center">
                 {/* Hidden Update Display Name Button - functionality preserved */}
                 <div className="flex flex-col hidden">
                   <Button 
                     onClick={handleForceUpdateDisplayName}
-                    disabled={saveStatus === 'saving'}
                     variant="outline"
                     className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
                   >
@@ -966,20 +927,10 @@ export default function SettingsPage() {
                 
                 <Button 
                   onClick={handleSaveProfile}
-                  disabled={saveStatus === 'saving'}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
                 >
-                  {saveStatus === 'saving' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </>
-                  )}
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
                 </Button>
               </div>
             </>
@@ -1236,14 +1187,9 @@ export default function SettingsPage() {
               <Button
                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                 onClick={activeSection === 'privacy' ? handleSavePrivacySettings : handleSaveProfile}
-                disabled={saveStatus === 'saving'}
               >
-                {saveStatus === 'saving' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                {saveStatus === 'saving' ? 'Saving...' : 'Save Settings'}
+                <Save className="w-4 h-4 mr-2" />
+                Save Settings
               </Button>
             </div>
           </div>
