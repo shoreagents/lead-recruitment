@@ -164,8 +164,6 @@ export default function ProfilePage() {
   const [isCulturalStrengthsExpanded, setIsCulturalStrengthsExpanded] = useState<boolean>(false);
   const [isTypingAnalysisExpanded, setIsTypingAnalysisExpanded] = useState<boolean>(false);
   const [isTypingStrengthsExpanded, setIsTypingStrengthsExpanded] = useState<boolean>(false);
-  const [showUsernameChangeModal, setShowUsernameChangeModal] = useState<boolean>(false);
-  const [usernameChangeStep, setUsernameChangeStep] = useState<number>(1);
 
   // Function to determine rank based on overall score (matching leaderboards and talent search system)
   const getRank = (score: number) => {
@@ -406,26 +404,18 @@ export default function ProfilePage() {
     // Check if username has changed
     const usernameChanged = editedPersonalInfo.username !== userProfile.username;
     
-    // Show loading modal if username changed
-    if (usernameChanged && editedPersonalInfo.username) {
-      setShowUsernameChangeModal(true);
-      setUsernameChangeStep(1);
-    }
-    
     setIsSaving(true);
     try {
       // Get the current session token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         console.error('No session found');
-        setShowUsernameChangeModal(false);
         return;
       }
 
       // Calculate full name from first and last name
       const fullName = `${editedPersonalInfo.first_name || ''} ${editedPersonalInfo.last_name || ''}`.trim();
       
-      if (usernameChanged) setUsernameChangeStep(2); // Saving changes
       
       const response = await fetch('/api/user/update-profile', {
         method: 'PUT',
@@ -449,51 +439,26 @@ export default function ProfilePage() {
           full_name: fullName
         } : null);
         
-        // If username changed, verify update and redirect
+        // If username changed, redirect to new profile URL
         if (usernameChanged && editedPersonalInfo.username) {
-          setUsernameChangeStep(3); // Verifying changes
-          console.log('🔄 Verifying username update in database...');
-          
-          // Wait for initial database write to propagate
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          console.log('🔄 Username changed, redirecting to new profile URL...');
           
           // Convert username to lowercase to match the database slug format
           const slugifiedUsername = editedPersonalInfo.username.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
           console.log(`📝 Slugified username: ${editedPersonalInfo.username} → ${slugifiedUsername}`);
           
-          // Verify the username is updated in the database
-          const verified = await verifyUsernameUpdate(slugifiedUsername);
-          
-          setUsernameChangeStep(4); // Redirecting
-          
-          if (verified) {
-            console.log('✅ Profile verified and accessible, redirecting...');
-            // Small delay before redirect
-            await new Promise(resolve => setTimeout(resolve, 300));
-            // Redirect to clean URL (use slugified username for URL)
-            window.location.href = `/${slugifiedUsername}`;
-        } else {
-          console.warn('⚠️ Profile verification timed out');
-          // Wait longer and try redirect anyway
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          console.log('⚠️ Redirecting with longer timeout...');
+          // Redirect immediately to new profile URL
           window.location.href = `/${slugifiedUsername}`;
+        } else {
+          // Username didn't change, but other profile fields were updated - refresh to update UI
+          console.log('✅ Profile updated (no username change), refreshing page...');
+          window.location.reload();
         }
       } else {
-        // Username didn't change, but other profile fields were updated - refresh to update UI (navbar, profile display, etc.)
-        console.log('✅ Profile updated (no username change), refreshing page...');
-        await new Promise(resolve => setTimeout(resolve, 300));
-        window.location.reload();
-      }
-      } else {
         console.error('Failed to save changes');
-        setShowUsernameChangeModal(false);
-        setUsernameChangeStep(1);
       }
     } catch (error) {
       console.error('Error saving changes:', error);
-      setShowUsernameChangeModal(false);
-      setUsernameChangeStep(1);
     } finally {
       if (!usernameChanged) {
         setIsSaving(false);
@@ -947,109 +912,6 @@ export default function ProfilePage() {
     <div className="min-h-screen cyber-grid overflow-hidden">
       <Header />
       
-      {/* Username Change Loading Modal */}
-      <Dialog open={showUsernameChangeModal} onOpenChange={() => {}}>
-        <DialogContent 
-          showCloseButton={false}
-          className="max-w-md bg-gradient-to-br from-cyan-900/95 via-blue-900/95 to-purple-900/95 border-cyan-400/50"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg">
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              </div>
-              Updating Username
-            </DialogTitle>
-            <DialogDescription className="text-cyan-200 text-base mt-2">
-              Please wait while we update your profile...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6 space-y-6">
-            <div className="flex justify-center">
-              <Loader2 className="h-12 w-12 text-cyan-400 animate-spin" />
-            </div>
-            
-            {/* Progress Steps */}
-            <div className="space-y-3">
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${
-                usernameChangeStep >= 1 ? 'bg-cyan-500/20 border border-cyan-500/40' : 'bg-gray-800/20 border border-gray-700/40'
-              }`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  usernameChangeStep >= 2 ? 'bg-green-500' : usernameChangeStep === 1 ? 'bg-cyan-500' : 'bg-gray-600'
-                }`}>
-                  {usernameChangeStep >= 2 ? (
-                    <CheckCircle className="h-4 w-4 text-white" />
-                  ) : usernameChangeStep === 1 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  ) : (
-                    <span className="text-white text-xs">1</span>
-                  )}
-                </div>
-                <span className={`text-sm font-medium ${usernameChangeStep >= 1 ? 'text-white' : 'text-gray-400'}`}>
-                  Preparing changes
-                </span>
-              </div>
-
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${
-                usernameChangeStep >= 2 ? 'bg-cyan-500/20 border border-cyan-500/40' : 'bg-gray-800/20 border border-gray-700/40'
-              }`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  usernameChangeStep >= 3 ? 'bg-green-500' : usernameChangeStep === 2 ? 'bg-cyan-500' : 'bg-gray-600'
-                }`}>
-                  {usernameChangeStep >= 3 ? (
-                    <CheckCircle className="h-4 w-4 text-white" />
-                  ) : usernameChangeStep === 2 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  ) : (
-                    <span className="text-white text-xs">2</span>
-                  )}
-                </div>
-                <span className={`text-sm font-medium ${usernameChangeStep >= 2 ? 'text-white' : 'text-gray-400'}`}>
-                  Saving to database
-                </span>
-              </div>
-
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${
-                usernameChangeStep >= 3 ? 'bg-cyan-500/20 border border-cyan-500/40' : 'bg-gray-800/20 border border-gray-700/40'
-              }`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  usernameChangeStep >= 4 ? 'bg-green-500' : usernameChangeStep === 3 ? 'bg-cyan-500' : 'bg-gray-600'
-                }`}>
-                  {usernameChangeStep >= 4 ? (
-                    <CheckCircle className="h-4 w-4 text-white" />
-                  ) : usernameChangeStep === 3 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  ) : (
-                    <span className="text-white text-xs">3</span>
-                  )}
-                </div>
-                <span className={`text-sm font-medium ${usernameChangeStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
-                  Verifying update
-                </span>
-              </div>
-
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${
-                usernameChangeStep >= 4 ? 'bg-cyan-500/20 border border-cyan-500/40' : 'bg-gray-800/20 border border-gray-700/40'
-              }`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  usernameChangeStep === 4 ? 'bg-cyan-500' : 'bg-gray-600'
-                }`}>
-                  {usernameChangeStep === 4 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  ) : (
-                    <span className="text-white text-xs">4</span>
-                  )}
-                </div>
-                <span className={`text-sm font-medium ${usernameChangeStep >= 4 ? 'text-white' : 'text-gray-400'}`}>
-                  Redirecting to new profile
-                </span>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
       
       {/* Background Effects */}
       <div className="absolute inset-0">
