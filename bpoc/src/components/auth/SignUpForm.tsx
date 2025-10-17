@@ -457,7 +457,7 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
                         errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
                       }`}
                       disabled={isLoading}
-                      autoComplete="off"
+                      autoComplete="given-name"
                     />
                   </div>
                   {errors.firstName && (
@@ -487,7 +487,7 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
                         errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
                       }`}
                       disabled={isLoading}
-                      autoComplete="off"
+                      autoComplete="family-name"
                     />
                   </div>
                   {errors.lastName && (
@@ -519,7 +519,7 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
                       errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
                     }`}
                     disabled={isLoading}
-                    autoComplete="off"
+                    autoComplete="email"
                   />
                 </div>
                 {errors.email && (
