@@ -402,33 +402,8 @@ export default function SettingsPage() {
       // Generate full name from first and last name
       const fullName = `${profileData.first_name} ${profileData.last_name}`.trim()
 
-      // Update Supabase user metadata with explicit full_name
-      const metadata = {
-        first_name: profileData.first_name,
-        last_name: profileData.last_name,
-        full_name: fullName, // Ensure this is always set
-        location: profileData.location,
-        avatar_url: profileData.avatar_url,
-        phone: profileData.phone,
-        bio: profileData.bio,
-        position: profileData.position
-      }
-
-      console.log('🔄 Calling updateProfile with metadata:', metadata)
-      const { error: supabaseError } = await updateProfile(metadata)
-      
-      if (supabaseError) {
-        console.error('❌ Supabase update failed:', supabaseError)
-        // Continue with Railway update even if Supabase fails
-        console.log('⚠️ Continuing with Railway update despite Supabase failure')
-        setErrorMessage(`Railway updated successfully, but Supabase auth update failed: ${supabaseError.message}. This may be due to temporary Supabase infrastructure issues.`)
-      } else {
-        console.log('✅ Supabase update successful, updating Railway...')
-        setErrorMessage('')
-      }
-
-      // Update Railway database
-      console.log('🔄 Updating Railway database...')
+      // Update Railway database (which also handles Supabase metadata update)
+      console.log('🔄 Updating Railway database and Supabase metadata...')
       const railwayResponse = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
@@ -441,7 +416,7 @@ export default function SettingsPage() {
       })
 
       if (railwayResponse.ok) {
-        console.log('✅ Railway update successful')
+        console.log('✅ Railway and Supabase update successful')
         setSaveStatus('success')
         setErrorMessage('')
         
