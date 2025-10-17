@@ -132,9 +132,8 @@ export default function Header({}: HeaderProps) {
             setProfileLoading(false)
           }, 10000) // 10 second timeout
           
-          // Add cache busting parameter to force fresh data
-          const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : ''
-          const response = await fetch(`/api/user/profile?userId=${user.id}${cacheBuster}`)
+          // Fetch profile data
+          const response = await fetch(`/api/user/profile?userId=${user.id}`)
           clearTimeout(timeoutId)
           if (response.ok) {
             const data = await response.json()
@@ -390,8 +389,8 @@ export default function Header({}: HeaderProps) {
     if (user?.id) {
       try {
         setProfileLoading(true)
-        // Add cache busting to force fresh data
-        const response = await fetch(`/api/user/profile?userId=${user.id}&_t=${Date.now()}`)
+        // Fetch fresh profile data
+        const response = await fetch(`/api/user/profile?userId=${user.id}`)
         if (response.ok) {
           const data = await response.json()
           setUserProfile(data.user)

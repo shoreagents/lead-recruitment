@@ -400,7 +400,7 @@ export default function RecruiterSignUpForm({ open, onOpenChange, onSwitchToLogi
                         errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
                       }`}
                       disabled={isLoading}
-                      autoComplete="given-name"
+                      autoComplete="off"
                     />
                     {errors.firstName && (
                       <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
@@ -421,7 +421,7 @@ export default function RecruiterSignUpForm({ open, onOpenChange, onSwitchToLogi
                         errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
                       }`}
                       disabled={isLoading}
-                      autoComplete="family-name"
+                      autoComplete="off"
                     />
                     {errors.lastName && (
                       <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
@@ -445,7 +445,7 @@ export default function RecruiterSignUpForm({ open, onOpenChange, onSwitchToLogi
                       errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
                     }`}
                     disabled={isLoading}
-                    autoComplete="email"
+                    autoComplete="off"
                   />
                   {errors.email && (
                     <p className="text-red-500 text-xs mt-1">{errors.email}</p>
