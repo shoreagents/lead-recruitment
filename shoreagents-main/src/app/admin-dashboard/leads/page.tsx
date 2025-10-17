@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/lib/admin-auth-context'
 import { AdminGuard } from '@/components/auth/AdminGuard'
@@ -27,17 +27,21 @@ import {
   CheckCircle,
   AlertCircle,
   Target,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from 'lucide-react'
 import { useLeads, useUpdateLeadStatus } from '@/hooks/use-api'
+import { LeadDetailsModal } from '@/components/ui/lead-details-modal'
+import { ChangeReasonModal } from '@/components/ui/change-reason-modal'
 
 const columns = [
-  { id: 'new', name: 'New Leads' },
-  { id: 'contacted', name: 'Contacted' },
-  { id: 'qualified', name: 'Qualified' },
-  { id: 'proposal', name: 'Proposal Sent' },
-  { id: 'negotiation', name: 'Negotiation' },
-  { id: 'closed', name: 'Closed Won' }
+  { id: 'new_lead', name: 'New Lead' },
+  { id: 'stage_1', name: 'Stage 1' },
+  { id: 'stage_2', name: 'Stage 2' },
+  { id: 'pending', name: 'Pending' },
+  { id: 'meeting_booked', name: 'Meeting Booked' },
+  { id: 'signed_up', name: 'Signed Up' },
+  { id: 'closed_won', name: 'Closed Won' }
 ]
 
 export default function LeadManagement() {
@@ -45,15 +49,49 @@ export default function LeadManagement() {
   const { admin, loading, signOut, isAdmin } = useAdminAuth()
   const { data: leadsData, isLoading, error, refetch } = useLeads()
   const updateLeadStatusMutation = useUpdateLeadStatus()
+  const [selectedLead, setSelectedLead] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isChangeReasonModalOpen, setIsChangeReasonModalOpen] = useState(false)
+  const [pendingChange, setPendingChange] = useState<{
+    leadId: string
+    leadName: string
+    fromColumn: string
+    toColumn: string
+  } | null>(null)
+  const [originalLeadsSnapshot, setOriginalLeadsSnapshot] = useState<typeof leads>([])
+  
+  // Add error handling for the mutation
+  useEffect(() => {
+    if (updateLeadStatusMutation.error) {
+      console.error('❌ Lead status update failed:', updateLeadStatusMutation.error)
+    }
+    if (updateLeadStatusMutation.isSuccess) {
+      console.log('✅ Lead status updated successfully')
+    }
+  }, [updateLeadStatusMutation.error, updateLeadStatusMutation.isSuccess])
+
+  // Debug modal state
+  useEffect(() => {
+    console.log('🔍 Modal state changed:', { isChangeReasonModalOpen, pendingChange })
+  }, [isChangeReasonModalOpen, pendingChange])
+
+  // Store a snapshot of leads when they load
+  useEffect(() => {
+    if (leads && leads.length > 0) {
+      setOriginalLeadsSnapshot(JSON.parse(JSON.stringify(leads)))
+      console.log('📸 Snapshot taken of leads:', leads.length, 'leads')
+    }
+  }, [leadsData])
   
   const leads = leadsData?.data || []
   const stats = leadsData?.stats || {
     new: 0,
-    contacted: 0,
-    qualified: 0,
-    proposal: 0,
-    negotiation: 0,
-    closed: 0
+    stage1: 0,
+    stage2: 0,
+    pending: 0,
+    meeting_booked: 0,
+    signed_up: 0,
+    closed_won: 0
   }
 
   const getPriorityColor = (priority: string) => {
@@ -83,16 +121,98 @@ export default function LeadManagement() {
   }
 
   const handleDataChange = (newData: typeof leads) => {
-    // Update lead status when dragged to different column
+    console.log('🔄 handleDataChange called!')
+    console.log('🔄 New data:', newData)
+    console.log('🔄 Original snapshot:', originalLeadsSnapshot)
+    
+    if (!newData || newData.length === 0) {
+      console.log('⚠️ No data to process')
+      return
+    }
+    
+    // Check for column changes and show modal using the snapshot
+    let changeDetected = false
     newData.forEach(lead => {
-      const originalLead = leads.find(l => l.id === lead.id)
+      const originalLead = originalLeadsSnapshot.find(l => l.id === lead.id)
+      console.log(`🔍 Checking lead ${lead.id}: original=${originalLead?.column}, new=${lead.column}`)
+      
       if (originalLead && originalLead.column !== lead.column) {
-        updateLeadStatusMutation.mutate({
+        console.log(`📝 COLUMN CHANGE DETECTED! Lead ${lead.id} moved from ${originalLead.column} to ${lead.column}`)
+        changeDetected = true
+        
+        // Show change reason modal
+        setPendingChange({
           leadId: lead.id,
-          column: lead.column
+          leadName: lead.name,
+          fromColumn: originalLead.column,
+          toColumn: lead.column
         })
+        setIsChangeReasonModalOpen(true)
+        console.log('🎯 Modal state set to open')
       }
     })
+    
+    if (!changeDetected) {
+      console.log('⚠️ No column changes detected')
+    }
+  }
+
+  const handleConfirmChange = (reason: string) => {
+    if (!pendingChange) {
+      console.log('❌ No pending change to confirm')
+      return
+    }
+
+    console.log(`📝 Confirming change for lead ${pendingChange.leadId} from ${pendingChange.fromColumn} to ${pendingChange.toColumn}`)
+    
+    // Close modal immediately
+    setIsChangeReasonModalOpen(false)
+    
+    // Construct admin full name
+    const adminFullName = admin?.first_name && admin?.last_name 
+      ? `${admin.first_name} ${admin.last_name}`
+      : 'Unknown Admin'
+    
+    // Update the lead status in the database
+    updateLeadStatusMutation.mutate({
+      leadId: pendingChange.leadId,
+      column: pendingChange.toColumn,
+      changedBy: adminFullName,
+      changeReason: reason || 'Admin drag and drop'
+    }, {
+      onSuccess: () => {
+        console.log('✅ Lead status updated successfully in database')
+        // Refetch to get the updated data
+        refetch()
+        setPendingChange(null)
+      },
+      onError: (error) => {
+        console.error('❌ Failed to update lead status:', error)
+        // Refetch to reset the UI on error
+        refetch()
+        setPendingChange(null)
+      }
+    })
+  }
+
+  const handleCancelChange = () => {
+    console.log('❌ Change cancelled, reverting to original position')
+    // Close modal immediately
+    setIsChangeReasonModalOpen(false)
+    setPendingChange(null)
+    // Refetch data to reset the UI to original state
+    refetch()
+  }
+
+  const handleLeadClick = (lead: any) => {
+    console.log('Lead clicked:', lead)
+    setSelectedLead(lead)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedLead(null)
   }
 
   const handleLogout = async () => {
@@ -137,6 +257,22 @@ export default function LeadManagement() {
                   >
                     <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                     Refresh
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      console.log('🧪 Test modal button clicked')
+                      setPendingChange({
+                        leadId: 'test',
+                        leadName: 'Test Lead',
+                        fromColumn: 'new_lead',
+                        toColumn: 'stage_1'
+                      })
+                      setIsChangeReasonModalOpen(true)
+                    }}
+                    variant="outline"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    Test Modal
                   </Button>
                   <Button 
                     onClick={handleLogout}
@@ -187,7 +323,7 @@ export default function LeadManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-yellow-600">
-                      {isLoading ? '...' : stats.contacted + stats.qualified + stats.proposal + stats.negotiation}
+                      {isLoading ? '...' : stats.stage1 + stats.stage2 + stats.pending + stats.meeting_booked + stats.signed_up}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Active deals
@@ -202,7 +338,7 @@ export default function LeadManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {isLoading ? '...' : stats.closed}
+                      {isLoading ? '...' : stats.closed_won}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Successful deals
@@ -255,6 +391,11 @@ export default function LeadManagement() {
                     </div>
                   ) : (
                     <div className="h-[600px]">
+                      {updateLeadStatusMutation.isPending && (
+                        <div className="absolute top-4 right-4 bg-lime-100 text-lime-800 px-3 py-2 rounded-md text-sm font-medium z-10">
+                          Updating lead status...
+                        </div>
+                      )}
                       <KanbanProvider
                         columns={columns}
                         data={leads}
@@ -272,7 +413,15 @@ export default function LeadManagement() {
                             </KanbanHeader>
                             <KanbanCards id={column.id}>
                               {(lead) => (
-                                <KanbanCard key={lead.id} id={lead.id} name={lead.name}>
+                                <KanbanCard 
+                                  key={lead.id} 
+                                  id={lead.id} 
+                                  name={lead.name}
+                                  onClick={() => handleLeadClick(lead)}
+                                  showClickButton={true}
+                                  clickButtonText="View Details"
+                                  className="hover:shadow-md transition-shadow duration-200"
+                                >
                                   <div className="space-y-3">
                                      {/* Lead Header */}
                                      <div className="flex items-start justify-between">
@@ -337,6 +486,23 @@ export default function LeadManagement() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+
+      {/* Lead Details Modal */}
+      <LeadDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        lead={selectedLead}
+      />
+
+      {/* Change Reason Modal */}
+      <ChangeReasonModal
+        isOpen={isChangeReasonModalOpen}
+        onClose={handleCancelChange}
+        onConfirm={handleConfirmChange}
+        leadName={pendingChange?.leadName || ''}
+        fromColumn={pendingChange?.fromColumn || ''}
+        toColumn={pendingChange?.toColumn || ''}
+      />
     </AdminGuard>
   )
 }

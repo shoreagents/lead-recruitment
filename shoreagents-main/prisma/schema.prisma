@@ -28,6 +28,7 @@ model User {
   candidateViews      CandidateView[]    @relation("UserCandidateViews")
   interviewRequests   InterviewRequest[] @relation("UserInterviewRequests")
   pricingQuotes       PricingQuote[]     @relation("UserPricingQuotes")
+  leadProgress        LeadProgress[]     @relation("UserLeadProgress")
 
   @@index([company], map: "idx_users_company")
   @@index([country], map: "idx_users_country")
@@ -251,6 +252,41 @@ model content_views {
   @@index([user_id, viewed_at], map: "idx_content_views_user_analytics")
   @@index([user_id], map: "idx_content_views_user_id")
   @@index([viewed_at], map: "idx_content_views_viewed_at")
+  @@schema("public")
+}
+
+model LeadProgress {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String    @unique @map("user_id") @db.VarChar(255) // Make user_id unique - one record per user
+  status          String    @map("status") @db.VarChar(50) // 'new_lead', 'stage_1', 'stage_2', 'pending', 'meeting_booked', 'signed_up', 'closed_won'
+  previous_status String?   @map("previous_status") @db.VarChar(50)
+  changed_by      String?   @map("changed_by") @db.VarChar(255) // admin user ID who made the change
+  change_reason   String?   @map("change_reason") @db.VarChar(500) // optional reason for change
+  created_at      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  user            User      @relation("UserLeadProgress", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  
+  @@index([status], map: "idx_lead_progress_status")
+  @@index([changed_by], map: "idx_lead_progress_changed_by")
+  @@map("lead_progress")
+  @@schema("public")
+}
+
+model AdminUser {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id        String    @unique @map("admin_id") @db.VarChar(255)
+  first_name      String    @map("first_name") @db.VarChar(100)
+  last_name       String    @map("last_name") @db.VarChar(100)
+  email           String    @unique @db.VarChar(255)
+  role            String    @default("admin") @db.VarChar(50)
+  is_active       Boolean   @default(true) @map("is_active")
+  created_at      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  
+  @@index([admin_id], map: "idx_admin_users_admin_id")
+  @@index([email], map: "idx_admin_users_email")
+  @@index([is_active], map: "idx_admin_users_is_active")
+  @@map("admin_users")
   @@schema("public")
 }
 

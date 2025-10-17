@@ -13,6 +13,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const { selectedCurrency, setSelectedCurrency, isDetectingLocation, detectUserLocation, isAutoDetected, setIsAutoDetected, hasUserSelectedCurrency, setHasUserSelectedCurrency } = useCurrency()
   const pathname = usePathname()
   
@@ -31,6 +32,11 @@ export function Navbar() {
     EUR: 'EUROPE',
     PHP: 'PHILIPPINES'
   }
+
+  // Handle mounting to prevent hydration mismatches
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Scroll event listener to track scroll state
   useEffect(() => {
@@ -499,30 +505,34 @@ export function Navbar() {
         
 
           {/* Currency Selector and Auth Buttons - Right Edge */}
-          <div className="hidden md:flex items-center space-x-4 absolute right-4 top-0 h-16">
+          <div className="hidden md:flex items-center space-x-2 absolute right-4 top-0 h-16">
             {/* Currency Selector */}
             <div className="relative group">
               <div 
-                className={`flex items-center space-x-2 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-600 hover:bg-gray-50'} rounded-lg px-3 py-1.5 cursor-pointer transition-all duration-200 w-24`}
+                className={`flex items-center space-x-1 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-600 hover:bg-gray-50'} rounded-lg px-2 py-1.5 cursor-pointer transition-all duration-200 min-w-0 flex-shrink-0`}
                 title={isDetectingLocation ? "Detecting your location..." : `Current currency: ${selectedCurrency.code}${isAutoDetected ? ' (Auto-detected)' : hasUserSelectedCurrency ? ' (Manually selected)' : ''}`}
               >
                 {isAutoDetected && (
-                  <div className="w-2 h-2 bg-lime-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-lime-500 rounded-full animate-pulse flex-shrink-0"></div>
                 )}
                 {hasUserSelectedCurrency && !isAutoDetected && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                 )}
-                {isDetectingLocation ? (
+                {!isMounted ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                    <span className={`text-sm font-medium whitespace-nowrap ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>USD</span>
+                  </>
+                ) : isDetectingLocation ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 flex-shrink-0"></div>
                     <span className="text-sm font-medium text-gray-600">...</span>
                   </>
                 ) : (
                   <>
-                    <span className={`text-sm font-medium ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>{selectedCurrency.code}</span>
+                    <span className={`text-sm font-medium whitespace-nowrap ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>{selectedCurrency.code}</span>
                   </>
                 )}
-                <ChevronDown className={`h-3 w-3 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'} transition-transform duration-200 group-hover:rotate-180`} />
+                <ChevronDown className={`h-3 w-3 flex-shrink-0 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'} transition-transform duration-200 group-hover:rotate-180`} />
               </div>
               
               {/* Currency Dropdown */}
@@ -568,11 +578,11 @@ export function Navbar() {
 
           
           {/* Absolute positioned currency and burger icons for edge alignment */}
-          <div className="lg:hidden absolute right-0 top-0 h-16 flex items-center space-x-2 pr-2">
+          <div className="lg:hidden absolute right-0 top-0 h-16 flex items-center space-x-1 pr-2">
             {/* Mobile Currency Selector */}
             <div className="relative group">
               <button 
-                className={`flex items-center space-x-2 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-600 hover:bg-gray-50'} rounded-lg px-3 py-2 transition-all duration-200 focus:outline-none`}
+                className={`flex items-center space-x-1 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-600 hover:bg-gray-50'} rounded-lg px-2 py-2 transition-all duration-200 focus:outline-none min-w-0 flex-shrink-0`}
                 title={isDetectingLocation ? "Detecting your location..." : `Current currency: ${selectedCurrency.code}${isAutoDetected ? ' (Auto-detected)' : hasUserSelectedCurrency ? ' (Manually selected)' : ''}`}
                 onClick={() => {
                   // Toggle dropdown visibility
@@ -589,20 +599,27 @@ export function Navbar() {
                 {hasUserSelectedCurrency && !isAutoDetected && (
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 )}
-                {isDetectingLocation ? (
+                {!isMounted ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                    <svg className={`w-4 h-4 flex-shrink-0 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    <span className={`text-sm font-medium whitespace-nowrap ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>USD</span>
+                  </>
+                ) : isDetectingLocation ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 flex-shrink-0"></div>
                     <span className="text-sm font-medium text-gray-600">...</span>
                   </>
                 ) : (
                   <>
-                    <svg className={`w-4 h-4 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 flex-shrink-0 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
-                    <span className={`text-sm font-medium ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>{selectedCurrency.code}</span>
+                    <span className={`text-sm font-medium whitespace-nowrap ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-700'}`}>{selectedCurrency.code}</span>
                   </>
                 )}
-                <ChevronDown className={`h-3 w-3 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'} transition-transform duration-200 group-hover:rotate-180`} />
+                <ChevronDown className={`h-3 w-3 flex-shrink-0 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white' : 'text-gray-500'} transition-transform duration-200 group-hover:rotate-180`} />
               </button>
               
               {/* Currency Dropdown */}
@@ -648,7 +665,7 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               onClick={toggleMobileMenu}
-              className={`${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-700 hover:bg-lime-50'} transition-colors duration-200`}
+              className={`flex-shrink-0 ${isEmployeePage || isUserDashboard || isAdminDashboard ? 'text-white hover:bg-lime-700' : 'text-gray-700 hover:bg-lime-50'} transition-colors duration-200`}
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
