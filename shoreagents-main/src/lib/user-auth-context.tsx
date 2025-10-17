@@ -256,6 +256,30 @@ export function UserAuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('✅ UserAuth - User state cleared')
       
+      // Clear all browser cache and storage
+      if (typeof window !== 'undefined') {
+        // Clear localStorage except for essential items
+        const essentialKeys = ['theme', 'language']
+        const keysToRemove = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && !essentialKeys.includes(key)) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+        
+        // Clear sessionStorage
+        sessionStorage.clear()
+        
+        // Clear TanStack Query cache
+        if ((window as any).__REACT_QUERY_CLIENT__) {
+          (window as any).__REACT_QUERY_CLIENT__.clear()
+        }
+        
+        console.log('✅ UserAuth - Browser cache cleared')
+      }
+      
       // Force redirect to home page
       setTimeout(() => {
         window.location.href = '/'
@@ -264,8 +288,20 @@ export function UserAuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('❌ UserAuth - Sign out error:', error)
       
-      // Even if there's an error, clear user state
+      // Even if there's an error, clear user state and cache
       setUser(null)
+      
+      // Clear cache even on error
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.clear()
+          if ((window as any).__REACT_QUERY_CLIENT__) {
+            (window as any).__REACT_QUERY_CLIENT__.clear()
+          }
+        } catch (e) {
+          console.error('Error clearing cache:', e)
+        }
+      }
       
       // Still redirect to home page
       window.location.href = '/'
