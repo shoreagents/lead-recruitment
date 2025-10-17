@@ -33,14 +33,14 @@ export async function PUT(request: NextRequest) {
         last_name = COALESCE($2, last_name),
         full_name = COALESCE($3, full_name),
         username = COALESCE($4, username),
-        slug = COALESCE($4, slug),
-        location = COALESCE($5, location),
-        position = COALESCE($6, position),
-        gender = COALESCE($7, gender),
-        gender_custom = COALESCE($8, gender_custom),
-        birthday = COALESCE($9, birthday),
+        slug = COALESCE($5, slug),
+        location = COALESCE($6, location),
+        position = COALESCE($7, position),
+        gender = COALESCE($8, gender),
+        gender_custom = COALESCE($9, gender_custom),
+        birthday = COALESCE($10, birthday),
         updated_at = NOW()
-      WHERE id = $10
+      WHERE id = $11
       RETURNING *
     `;
 
@@ -49,6 +49,7 @@ export async function PUT(request: NextRequest) {
       last_name || null,
       full_name || null,
       username || null,
+      slug || username || null, // Use explicit slug if provided, otherwise use username
       location || null,
       position || null,
       gender || null,
@@ -62,6 +63,7 @@ export async function PUT(request: NextRequest) {
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
 
     // Update Supabase display name to match database
     console.log('🔄 Updating Supabase display name to match database...')
@@ -99,9 +101,10 @@ export async function PUT(request: NextRequest) {
       console.error('❌ Supabase update error:', error instanceof Error ? error.message : String(error))
     }
 
+
     return NextResponse.json({ 
       success: true, 
-      user: result.rows[0] 
+      user: updatedUser
     });
 
   } catch (error) {

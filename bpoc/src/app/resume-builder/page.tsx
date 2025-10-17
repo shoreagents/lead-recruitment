@@ -113,6 +113,10 @@ export default function ResumeBuilderPage() {
     .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
     .animate-slideIn { animation: slideIn 0.3s ease-out; }
     .animate-shake { animation: shake 0.5s ease-in-out; }
+    .console-output-container { 
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
   `;
 
   // Reusable sticky footer component for different steps
@@ -786,7 +790,7 @@ export default function ResumeBuilderPage() {
       }}>
         <DialogContent 
           showCloseButton={false}
-          className="max-w-3xl w-full bg-gradient-to-br from-purple-900/95 via-purple-800/95 to-pink-900/95 border-purple-400/50"
+          className="max-w-3xl w-full max-h-[90vh] overflow-y-auto bg-gradient-to-br from-purple-900/95 via-purple-800/95 to-pink-900/95 border-purple-400/50"
           onInteractOutside={(e) => {
             // Prevent closing during processing
             e.preventDefault();
@@ -808,7 +812,7 @@ export default function ResumeBuilderPage() {
               This usually takes about 2–3 minutes. We'll keep you updated with each step.
             </DialogDescription>
           </DialogHeader>
-          <div className="text-center space-y-4 flex flex-col items-center relative">
+          <div className="text-center space-y-4 flex flex-col items-center relative py-4">
             {processedResumes.length === 0 && (
               <>
                 <div className="flex justify-center">
@@ -819,7 +823,7 @@ export default function ResumeBuilderPage() {
                     speedMultiplier={1.2}
                   />
                 </div>
-                <div className="max-w-2xl mx-auto space-y-2 w-full">
+                <div className="max-w-2xl mx-auto space-y-3 w-full">
                   <div className="flex justify-between text-sm">
                     <span className="text-purple-200">Progress</span>
                     <span className="text-green-400 font-bold">{Math.round(analysisProgress)}% Complete</span>
@@ -851,9 +855,9 @@ export default function ResumeBuilderPage() {
                   </div>
                   
                   {/* Enhanced Live Console Output Display */}
-                  <div className="mt-4">
+                  <div className="mt-4 w-full overflow-hidden">
                     <style dangerouslySetInnerHTML={{ __html: consoleStyles }} />
-                    <div className="bg-gradient-to-br from-gray-900/90 to-black/90 border border-purple-500/40 rounded-xl overflow-hidden shadow-2xl shadow-purple-500/20 backdrop-blur-sm">
+                    <div className="bg-gradient-to-br from-gray-900/90 to-black/90 border border-purple-500/40 rounded-xl overflow-hidden shadow-2xl shadow-purple-500/20 backdrop-blur-sm max-w-full">
                       {/* Enhanced Header */}
                       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-900/90 to-indigo-900/90 border-b border-purple-500/40">
                         <div className="flex items-center gap-3">
@@ -878,10 +882,10 @@ export default function ResumeBuilderPage() {
                       {/* Enhanced Console Content */}
                       <div 
                         ref={consoleOutputRef}
-                        className="console-output-container p-4 max-h-72 overflow-y-auto scroll-smooth scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-gray-800/50"
+                        className="console-output-container p-3 max-h-48 overflow-y-auto overflow-x-hidden scroll-smooth scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-gray-800/50"
                         style={{ scrollBehavior: 'smooth' }}
                       >
-                        <div className="space-y-1.5 text-left font-mono text-sm">
+                        <div className="space-y-1 text-left font-mono text-xs w-full">
                           {Object.entries(processingLogs).map(([fileName, logs]) => (
                             <div key={fileName}>
                               {logs.map((log, idx) => {
@@ -942,7 +946,7 @@ export default function ResumeBuilderPage() {
                                       delay: idx * 0.05,
                                       ease: "easeOut"
                                     }}
-                                    className={`${textColor} ${bgColor} leading-relaxed py-2 px-3 rounded-lg border-l-2 transition-all duration-300 hover:shadow-md ${
+                                    className={`${textColor} ${bgColor} leading-relaxed py-1.5 px-2.5 rounded-lg border-l-2 transition-all duration-300 hover:shadow-md w-full overflow-hidden ${
                                       isCompletedLog ? 'border-l-green-400 bg-green-500/10' :
                                       isError ? 'border-l-red-400 bg-red-500/10' :
                                       isWarning ? 'border-l-yellow-400 bg-yellow-500/10' :
@@ -964,9 +968,9 @@ export default function ResumeBuilderPage() {
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium">{log}</span>
-                                          <span className="text-xs opacity-60 ml-2 flex-shrink-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <span className="font-medium break-words overflow-wrap-anywhere flex-1 leading-tight">{log}</span>
+                                          <span className="text-[10px] opacity-60 flex-shrink-0 whitespace-nowrap">
                                             {timestamp}
                                           </span>
                                         </div>
