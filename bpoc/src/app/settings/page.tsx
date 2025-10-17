@@ -21,17 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { 
   Settings,
   User,
@@ -135,7 +124,6 @@ export default function SettingsPage() {
     smsNotifications: true,
     pushNotifications: true
   })
-  const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   // Privacy settings state
@@ -404,14 +392,23 @@ export default function SettingsPage() {
 
       // Update Railway database (which also handles Supabase metadata update)
       console.log('🔄 Updating Railway database and Supabase metadata...')
-      const railwayResponse = await fetch('/api/user/profile', {
+      const railwayResponse = await fetch('/api/user/update-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token || ''}`
         },
         body: JSON.stringify({
           userId: user.id,
-          ...profileData
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          full_name: fullName,
+          username: profileData.username,
+          location: profileData.location,
+          position: profileData.position,
+          gender: profileData.gender,
+          birthday: profileData.birthday,
+          slug: profileData.username // Use username as slug
         }),
       })
 
@@ -428,10 +425,19 @@ export default function SettingsPage() {
           console.error('❌ Failed to refresh user data:', error)
         }
         
-        // Show success message
+        // If username changed, redirect to new profile URL
+        if (profileData.username && profileData.username !== user.user_metadata?.username) {
+          console.log('🔄 Username changed, redirecting to new profile URL...')
+          // Small delay to ensure save is complete, then redirect
+          setTimeout(() => {
+            window.location.href = `/${profileData.username}`
+          }, 500)
+        }
+        
+        // Show success message briefly
         setTimeout(() => {
           setSaveStatus('idle')
-        }, 3000)
+        }, 2000)
         
         // Refresh header by triggering a custom event
         window.dispatchEvent(new CustomEvent('profileUpdated'))
@@ -442,7 +448,6 @@ export default function SettingsPage() {
         setErrorMessage(`Railway update failed: ${railwayError.error}`)
       }
 
-      setShowSaveDialog(false)
     } catch (error) {
       console.error('❌ Error saving profile:', error)
       setSaveStatus('error')
@@ -960,7 +965,7 @@ export default function SettingsPage() {
                 </div>
                 
                 <Button 
-                  onClick={() => setShowSaveDialog(true)}
+                  onClick={handleSaveProfile}
                   disabled={saveStatus === 'saving'}
                   className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 disabled:opacity-50"
                 >
@@ -1464,28 +1469,6 @@ export default function SettingsPage() {
         </div>
       </div>
       
-      {/* Save Changes Alert Dialog */}
-      <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <AlertDialogContent className="glass-card border-white/10">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Save Changes</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to save these changes to your profile? This will update your personal information.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleSaveProfile}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white border-0"
-            >
-              Save Changes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>

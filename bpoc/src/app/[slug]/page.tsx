@@ -364,7 +364,7 @@ export default function ProfilePage() {
       try {
         // Check if the profile page endpoint can find the user by new username
         const response = await fetch(
-          `/api/public/user-by-slug?slug=${encodeURIComponent(newUsername)}&_t=${Date.now()}`,
+          `/api/public/user-by-slug?slug=${encodeURIComponent(newUsername)}`,
           { 
             cache: 'no-store',
             headers: {
@@ -470,14 +470,14 @@ export default function ProfilePage() {
             console.log('✅ Profile verified and accessible, redirecting...');
             // Small delay before redirect
             await new Promise(resolve => setTimeout(resolve, 300));
-            // Redirect with cache busting to ensure fresh data (use slugified username for URL)
-            window.location.href = `/${slugifiedUsername}?updated=${Date.now()}`;
+            // Redirect to clean URL (use slugified username for URL)
+            window.location.href = `/${slugifiedUsername}`;
         } else {
           console.warn('⚠️ Profile verification timed out');
           // Wait longer and try redirect anyway
           await new Promise(resolve => setTimeout(resolve, 2000));
           console.log('⚠️ Redirecting with longer timeout...');
-          window.location.href = `/${slugifiedUsername}?updated=${Date.now()}`;
+          window.location.href = `/${slugifiedUsername}`;
         }
       } else {
         // Username didn't change, but other profile fields were updated - refresh to update UI (navbar, profile display, etc.)

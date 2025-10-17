@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      user: updatedUser
+      user: result.rows[0]
     });
 
   } catch (error) {

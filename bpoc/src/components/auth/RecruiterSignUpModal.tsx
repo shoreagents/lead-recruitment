@@ -204,7 +204,7 @@ export default function RecruiterSignUpModal({
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   disabled={isLoading}
-                  autoComplete="given-name"
+                  autoComplete="off"
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
@@ -220,7 +220,7 @@ export default function RecruiterSignUpModal({
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   disabled={isLoading}
-                  autoComplete="family-name"
+                  autoComplete="off"
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
@@ -239,7 +239,7 @@ export default function RecruiterSignUpModal({
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 disabled={isLoading}
-                autoComplete="email"
+                autoComplete="off"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
               />
             </div>
