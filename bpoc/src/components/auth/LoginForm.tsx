@@ -207,7 +207,7 @@ export default function LoginForm({ open, onOpenChange, onSwitchToSignUp }: Logi
                   onChange={(e) => setEmail(e.target.value)}
                   className={`pl-10 h-11 bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-cyan-500 focus:ring-cyan-500/20 transition-all duration-200 ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   disabled={isLoading}
-                  autoComplete="off"
+                  autoComplete="email"
                 />
               </div>
               {errors.email && (
