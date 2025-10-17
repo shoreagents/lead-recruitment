@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
@@ -3172,7 +3172,7 @@ Make it deeply personal and actionable based on their actual choices.`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
     </div>
   );
 }

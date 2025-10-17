@@ -502,10 +502,21 @@ export default function Header({}: HeaderProps) {
   // Update sessionStorage values on client side only
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setHasSignedIn(sessionStorage.getItem('hasSignedIn') === 'true')
-      setIsJustSignedUp(sessionStorage.getItem('justSignedUp') === 'true')
+      const storedHasSignedIn = sessionStorage.getItem('hasSignedIn') === 'true'
+      const storedIsJustSignedUp = sessionStorage.getItem('justSignedUp') === 'true'
+      
+      // If user exists but hasSignedIn is not set, set it to true
+      // This handles cases where users log in via OAuth and the flag isn't set
+      if (user && !storedHasSignedIn && !storedIsJustSignedUp) {
+        sessionStorage.setItem('hasSignedIn', 'true')
+        setHasSignedIn(true)
+      } else {
+        setHasSignedIn(storedHasSignedIn)
+      }
+      
+      setIsJustSignedUp(storedIsJustSignedUp)
     }
-  }, [])
+  }, [user])
   
   const userDisplayName = profileLoading ? 'Loading...' : (
     // Only show profile data if user has signed in

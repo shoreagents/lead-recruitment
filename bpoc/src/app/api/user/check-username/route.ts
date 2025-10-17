@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/database'
 
+// GET - Check if username exists and optionally verify owner
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const username = searchParams.get('username')
+
+    if (!username) {
+      return NextResponse.json({ error: 'Username is required' }, { status: 400 })
+    }
+
+    console.log('🔍 Checking username existence:', username)
+
+    // Check if username exists
+    const query = 'SELECT id FROM users WHERE username = $1 OR slug = $1'
+    const params = [username.toLowerCase()]
+
+    const result = await pool.query(query, params)
+
+    const exists = result.rows.length > 0
+    const userId = exists ? result.rows[0].id : null
+
+    console.log('✅ Username check result:', { username, exists, userId })
+
+    return NextResponse.json({ 
+      exists,
+      userId,
+      username: username.toLowerCase()
+    })
+
+  } catch (error) {
+    console.error('❌ Error checking username:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })
+  }
+}
+
 // POST - Check if username is available
 export async function POST(request: NextRequest) {
   try {

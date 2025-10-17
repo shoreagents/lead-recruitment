@@ -412,6 +412,12 @@ export default function TypingHeroPage() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   
+  // NEW: Resume check state
+  const [showResumeRequiredModal, setShowResumeRequiredModal] = useState(false);
+  const [hasResume, setHasResume] = useState<boolean | null>(null);
+  const [checkingResume, setCheckingResume] = useState(false);
+  const [userResumeData, setUserResumeData] = useState<any>(null);
+  
   // Progressive difficulty state
   const [currentSpawnRate, setCurrentSpawnRate] = useState<number>(1800);
   
@@ -502,6 +508,133 @@ export default function TypingHeroPage() {
     
     checkExistingStory();
   }, [user]);
+
+  // NEW: Check if user has a saved resume
+  const checkUserResume = useCallback(async () => {
+    if (!user?.id) {
+      setHasResume(false);
+      return false;
+    }
+
+    setCheckingResume(true);
+    try {
+      // Get the session token for authentication
+      const token = await (await import('@/lib/auth-helpers')).getSessionToken();
+      
+      const response = await fetch('/api/user/saved-resumes', {
+        headers: {
+          'x-user-id': String(user.id),
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const hasResumeData = data?.success && data?.hasSavedResume;
+        setHasResume(hasResumeData);
+        return hasResumeData;
+      } else {
+        setHasResume(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error checking user resume:', error);
+      setHasResume(false);
+      return false;
+    } finally {
+      setCheckingResume(false);
+    }
+  }, [user?.id]);
+
+  // Check for saved resume on page load
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🔍 Typing Hero: Checking for saved resume on page load...');
+      checkUserResume();
+    }
+  }, [user?.id, checkUserResume]);
+
+  // NEW: Fetch and extract skills/career goals from saved resume
+  const fetchUserResumeData = async () => {
+    if (!user?.id) return null;
+
+    try {
+      // Get the session token for authentication
+      const token = await (await import('@/lib/auth-helpers')).getSessionToken();
+      
+      // Fetch saved resume data
+      const response = await fetch('/api/user/saved-resume-data', {
+        headers: {
+          'x-user-id': String(user.id),
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.success && data?.resumeData) {
+          setUserResumeData(data.resumeData);
+          return data.resumeData;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error fetching resume data:', error);
+      return null;
+    }
+  };
+
+  // NEW: Extract skills from resume data
+  const extractSkillsFromResume = (resumeData: any): string[] => {
+    const skills: string[] = [];
+    
+    if (!resumeData) return skills;
+
+    // Extract from skills object
+    if (resumeData.skills) {
+      if (Array.isArray(resumeData.skills.technical)) {
+        skills.push(...resumeData.skills.technical);
+      }
+      if (Array.isArray(resumeData.skills.soft_skills)) {
+        skills.push(...resumeData.skills.soft_skills);
+      }
+      if (Array.isArray(resumeData.skills.tools)) {
+        skills.push(...resumeData.skills.tools);
+      }
+      if (Array.isArray(resumeData.skills.languages)) {
+        skills.push(...resumeData.skills.languages);
+      }
+    }
+
+    // Remove duplicates and return
+    return [...new Set(skills)].filter(Boolean);
+  };
+
+  // NEW: Extract career goals from resume data
+  const extractCareerGoalsFromResume = (resumeData: any): string[] => {
+    const goals: string[] = [];
+    
+    if (!resumeData) return goals;
+
+    // Extract from summary
+    if (resumeData.summary) {
+      goals.push(resumeData.summary);
+    }
+
+    // Extract from objectives
+    if (resumeData.objective) {
+      goals.push(resumeData.objective);
+    }
+
+    // Extract from career summary
+    if (resumeData.career_summary) {
+      goals.push(resumeData.career_summary);
+    }
+
+    return goals.filter(Boolean);
+  };
 
   // NEW: Stop current music (simplified for custom songs)
   const stopMusic = useCallback(() => {
@@ -806,13 +939,18 @@ export default function TypingHeroPage() {
       // No existing story, generate complete 5-chapter story
       console.log('📝 No existing story found, generating complete 5-chapter story...');
       
+      // Fetch resume data to extract skills and career goals
+      const resumeData = userResumeData || await fetchUserResumeData();
+      const skills = extractSkillsFromResume(resumeData);
+      const careerGoals = extractCareerGoalsFromResume(resumeData);
+      
       // Create user profile for story generation
       const userProfile: UserStoryProfile = {
         userId: user.id,
         name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.user_metadata?.full_name || 'Professional',
         position: user.user_metadata?.position || 'Career Professional',
-        skills: [], // TODO: Get from user profile
-        careerGoals: [], // TODO: Get from user profile
+        skills: skills.length > 0 ? skills : ['Communication', 'Problem Solving', 'Teamwork'],
+        careerGoals: careerGoals.length > 0 ? careerGoals : ['Professional Growth', 'Career Advancement'],
         currentEmployer: user.user_metadata?.company || '',
         workStatus: user.user_metadata?.work_status || 'professional',
         location: user.user_metadata?.location || 'Global'
@@ -906,19 +1044,31 @@ export default function TypingHeroPage() {
       return;
     }
 
+    // Check if user has a saved resume first
+    const hasResumeData = await checkUserResume();
+    if (!hasResumeData) {
+      setShowResumeRequiredModal(true);
+      return;
+    }
+
     setIsGeneratingStory(true);
     setStoryError(null);
     setStoryReady(false);
     setGameState('generating');
     
     try {
+      // Fetch resume data to extract skills and career goals
+      const resumeData = userResumeData || await fetchUserResumeData();
+      const skills = extractSkillsFromResume(resumeData);
+      const careerGoals = extractCareerGoalsFromResume(resumeData);
+      
       // Create user profile for story generation
       const userProfile: UserStoryProfile = {
         userId: user.id,
         name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.user_metadata?.full_name || 'Professional',
         position: user.user_metadata?.position || 'Career Professional',
-        skills: [],
-        careerGoals: [],
+        skills: skills.length > 0 ? skills : ['Communication', 'Problem Solving', 'Teamwork'],
+        careerGoals: careerGoals.length > 0 ? careerGoals : ['Professional Growth', 'Career Advancement'],
         currentEmployer: user.user_metadata?.company || '',
         workStatus: user.user_metadata?.work_status || 'professional',
         location: user.user_metadata?.location || 'Global'
@@ -985,13 +1135,7 @@ export default function TypingHeroPage() {
 
   // Check if difficulty is unlocked based on user progress
   const isDifficultyUnlocked = (difficulty: DifficultyLevel): boolean => {
-    // For now, keep all unlocked for testing, but show visual progression
-    // TODO: Implement real progression based on user performance
-    const progressionOrder: DifficultyLevel[] = ['rookie', 'rockstar', 'virtuoso', 'legend'];
-    const currentIndex = progressionOrder.indexOf(currentDifficulty);
-    const targetIndex = progressionOrder.indexOf(difficulty);
-    
-    // For testing: all unlocked, but show "recommended" vs "advanced"
+    // All difficulties unlocked by default - let players choose their challenge level
     return true;
   };
 
@@ -1135,7 +1279,7 @@ export default function TypingHeroPage() {
   // OLD spawnWord function removed - now using spawnWordInterval in useEffect
 
   // Start game with selected difficulty
-  const startGame = (difficulty: DifficultyLevel = 'rockstar') => {
+  const startGame = async (difficulty: DifficultyLevel = 'rockstar') => {
     // Stop any preview music that might be playing
     stopPreview();
     
@@ -1149,6 +1293,21 @@ export default function TypingHeroPage() {
       }
     }
     if (!isDifficultyUnlocked(difficulty)) return;
+
+    // Check if user has a saved resume first (use cached value for instant response)
+    if (hasResume === false) {
+      setShowResumeRequiredModal(true);
+      return;
+    }
+    
+    // If we haven't checked yet, check now
+    if (hasResume === null) {
+      const hasResumeData = await checkUserResume();
+      if (!hasResumeData) {
+        setShowResumeRequiredModal(true);
+        return;
+      }
+    }
     
     setCurrentDifficulty(difficulty);
     setGameState('generating'); // NEW: Show story generation state
@@ -1207,7 +1366,14 @@ export default function TypingHeroPage() {
   };
 
   // Actually start the game after ready button is clicked
-  const handleReadyClick = () => {
+  const handleReadyClick = async () => {
+    // Check if user has a saved resume first
+    const hasResumeData = await checkUserResume();
+    if (!hasResumeData) {
+      setShowResumeRequiredModal(true);
+      return;
+    }
+
     setShowInputGuide(false);
     setGameStartTime(Date.now());
     
@@ -5547,18 +5713,69 @@ export default function TypingHeroPage() {
              <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
                Continue Playing
              </AlertDialogCancel>
-             <AlertDialogAction 
-               onClick={() => {
-                 stopPreview();
-                 router.back();
-               }}
-               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0"
-             >
-               Exit Game
-             </AlertDialogAction>
-           </AlertDialogFooter>
-         </AlertDialogContent>
-       </AlertDialog>
-    </div>
+            <AlertDialogAction 
+              onClick={() => {
+                stopPreview();
+                router.back();
+              }}
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0"
+            >
+              Exit Game
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resume Required Alert Dialog */}
+      <AlertDialog open={showResumeRequiredModal} onOpenChange={setShowResumeRequiredModal}>
+        <AlertDialogContent className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/20">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+              <span className="text-3xl">📝</span>
+              Resume Required
+            </AlertDialogTitle>
+            <div className="text-gray-300 text-base mt-4 space-y-3">
+              <p>
+                Before you can start playing <span className="text-cyan-400 font-semibold">Typing Hero</span>, 
+                you need to create your resume first!
+              </p>
+              <p className="text-sm text-gray-400">
+                Creating a resume helps us personalize your gaming experience and generate 
+                custom stories based on your career profile.
+              </p>
+              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4 mt-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">✨</span>
+                  <div className="space-y-1">
+                    <p className="text-cyan-400 font-semibold text-sm">Why create a resume?</p>
+                    <ul className="text-xs text-gray-400 space-y-1 ml-1">
+                      <li>• Get personalized game stories</li>
+                      <li>• Unlock all game features</li>
+                      <li>• Track your progress better</li>
+                      <li>• Stand out to recruiters</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 mt-6">
+            <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+              Maybe Later
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowResumeRequiredModal(false);
+                router.push('/resume-builder');
+              }}
+              className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold border-0 shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:scale-105"
+            >
+              <span className="mr-2">🚀</span>
+              Create Resume Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+   </div>
   );
-} 
+}
