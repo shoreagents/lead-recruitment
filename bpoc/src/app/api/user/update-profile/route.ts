@@ -64,13 +64,43 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const updatedUser = result.rows[0];
-    console.log('✅ Profile updated successfully:', {
-      userId: updatedUser.id,
-      username: updatedUser.username,
-      slug: updatedUser.slug,
-      updated_at: updatedUser.updated_at
-    });
+
+    // Update Supabase display name to match database
+    console.log('🔄 Updating Supabase display name to match database...')
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (supabaseUrl && serviceKey) {
+        console.log('✅ Updating Supabase display name to:', full_name)
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey)
+        
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            first_name: first_name,
+            last_name: last_name,
+            full_name: full_name,
+            location: location,
+            position: position,
+            gender: gender,
+            gender_custom: gender_custom,
+            birthday: birthday
+          }
+        })
+        
+        if (error) {
+          console.error('❌ Supabase update failed:', error.message)
+        } else {
+          console.log('✅ Supabase display name updated to:', data.user?.user_metadata?.full_name)
+        }
+      } else {
+        console.log('⚠️ Missing Supabase environment variables')
+      }
+    } catch (error) {
+      console.error('❌ Supabase update error:', error instanceof Error ? error.message : String(error))
+    }
+
 
     return NextResponse.json({ 
       success: true, 

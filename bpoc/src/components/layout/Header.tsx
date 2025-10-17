@@ -112,7 +112,7 @@ export default function Header({}: HeaderProps) {
 
   // Fetch user profile from Railway with retry mechanism
   useEffect(() => {
-    const fetchUserProfile = async (retryCount = 0) => {
+    const fetchUserProfile = async (retryCount = 0, forceRefresh = false) => {
       if (user?.id) {
         let timeoutId: NodeJS.Timeout | undefined
         try {
@@ -132,7 +132,9 @@ export default function Header({}: HeaderProps) {
             setProfileLoading(false)
           }, 10000) // 10 second timeout
           
-          const response = await fetch(`/api/user/profile?userId=${user.id}`)
+          // Add cache busting parameter to force fresh data
+          const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : ''
+          const response = await fetch(`/api/user/profile?userId=${user.id}${cacheBuster}`)
           clearTimeout(timeoutId)
           if (response.ok) {
             const data = await response.json()
@@ -319,7 +321,16 @@ export default function Header({}: HeaderProps) {
                   setUserProfile(retryData.user)
                 }
               } else {
-                console.error('❌ Failed to sync user:', syncResponse.status)
+                const syncErrorData = await syncResponse.json()
+                console.error('❌ Failed to sync user:', syncResponse.status, syncErrorData)
+                
+                // Check if it's a database connection error
+                if (syncErrorData.code === 'DB_CONNECTION_ERROR') {
+                  console.error('🌐 Database connection error detected')
+                  // Don't retry for database connection errors
+                  return
+                }
+                
                 // Retry after a delay if sync failed and we haven't retried too many times
                 if (retryCount < 3) {
                   const delay = retryCount === 0 ? 1000 : retryCount === 1 ? 2000 : 3000
@@ -370,7 +381,8 @@ export default function Header({}: HeaderProps) {
       }
     }
 
-    fetchUserProfile()
+    // Force refresh when user changes to get latest data
+    fetchUserProfile(0, true)
   }, [user?.id])
 
   // Function to refresh user profile (can be called from settings after updates)
@@ -378,7 +390,8 @@ export default function Header({}: HeaderProps) {
     if (user?.id) {
       try {
         setProfileLoading(true)
-        const response = await fetch(`/api/user/profile?userId=${user.id}`)
+        // Add cache busting to force fresh data
+        const response = await fetch(`/api/user/profile?userId=${user.id}&_t=${Date.now()}`)
         if (response.ok) {
           const data = await response.json()
           setUserProfile(data.user)
@@ -390,6 +403,14 @@ export default function Header({}: HeaderProps) {
       }
     }
   }
+
+  // Clear user profile when user logs out
+  useEffect(() => {
+    if (!user) {
+      setUserProfile(null)
+      setProfileLoading(false)
+    }
+  }, [user])
 
   // Function to handle My Profile click when slug is not available
   const handleMyProfileClick = async () => {
@@ -519,8 +540,8 @@ export default function Header({}: HeaderProps) {
   }, [user])
   
   const userDisplayName = profileLoading ? 'Loading...' : (
-    // Only show profile data if user has signed in
-    (hasSignedIn && !isJustSignedUp) ? (
+    // Show profile data if user is authenticated
+    user ? (
       userProfile?.full_name || 
       (userProfile?.first_name && userProfile?.last_name ? `${userProfile.first_name} ${userProfile.last_name}` : null) ||
       userProfile?.username || 
@@ -536,8 +557,8 @@ export default function Header({}: HeaderProps) {
     ) : 'User'
   )
   const userInitials = profileLoading ? 'L' : (
-    // Only show profile initials if user has signed in
-    (hasSignedIn && !isJustSignedUp) ? (
+    // Show profile initials if user is authenticated
+    user ? (
       userProfile?.full_name 
         ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)
         : (userProfile?.first_name && userProfile?.last_name 

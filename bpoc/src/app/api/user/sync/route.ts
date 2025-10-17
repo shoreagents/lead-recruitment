@@ -19,6 +19,16 @@ export async function POST(request: NextRequest) {
   let userData: any = null
   
   try {
+    // Check environment variables first
+    const databaseUrl = process.env.DATABASE_URL
+    if (!databaseUrl) {
+      console.error('❌ Missing DATABASE_URL environment variable')
+      return NextResponse.json({ 
+        error: 'Database configuration error',
+        details: 'DATABASE_URL environment variable is not set'
+      }, { status: 500 })
+    }
+
     userData = await request.json()
     
     console.log('📥 Received user sync request:', {
@@ -37,7 +47,10 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!userData.id || !userData.email) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      console.error('❌ Missing required fields:', { id: userData.id, email: userData.email })
+      return NextResponse.json({ 
+        error: 'Missing required fields: id and email' 
+      }, { status: 400 })
     }
 
     // Sync user to Railway database
@@ -82,17 +95,49 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error in user sync API:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    
+    // Enhanced error logging
     console.error('❌ Error details:', {
       message: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       userData: userData ? {
         id: userData.id,
         email: userData.email
-      } : 'No user data received'
+      } : 'No user data received',
+      timestamp: new Date().toISOString(),
+      environment: {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV
+      }
     })
+    
+    // More specific error responses
+    if (error instanceof Error) {
+      if (error.message.includes('connection') || error.message.includes('ECONNREFUSED')) {
+        return NextResponse.json({ 
+          error: 'Database connection failed',
+          details: 'Unable to connect to the database. Please check your database configuration.',
+          code: 'DB_CONNECTION_ERROR'
+        }, { status: 503 })
+      } else if (error.message.includes('timeout')) {
+        return NextResponse.json({ 
+          error: 'Database timeout',
+          details: 'Database query timed out. Please try again.',
+          code: 'DB_TIMEOUT_ERROR'
+        }, { status: 504 })
+      } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+        return NextResponse.json({ 
+          error: 'User already exists',
+          details: 'A user with this ID or email already exists.',
+          code: 'DUPLICATE_USER_ERROR'
+        }, { status: 409 })
+      }
+    }
+    
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: errorMessage 
+      details: errorMessage,
+      code: 'INTERNAL_SERVER_ERROR'
     }, { status: 500 })
   }
 } 

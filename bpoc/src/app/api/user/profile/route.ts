@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 API: Fetching profile for user:', userId)
     console.log('🔍 API: Database URL available:', !!process.env.DATABASE_URL)
     console.log('🔍 API: Database URL length:', process.env.DATABASE_URL?.length || 0)
+    console.log('🔍 API: Cache busting parameter:', searchParams.get('_t'))
 
     // Base query (avoid selecting optional columns that may not exist across envs)
     const query = `
@@ -87,7 +88,14 @@ export async function GET(request: NextRequest) {
     
     console.log('✅ API: User profile loaded:', userProfile)
 
-    return NextResponse.json({ user: userProfile })
+    const response = NextResponse.json({ user: userProfile })
+    
+    // Add cache control headers to prevent caching
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
   } catch (error) {
     console.error('❌ API: Error fetching user profile:', error)
     console.error('❌ API: Error details:', {
@@ -128,12 +136,17 @@ export async function GET(request: NextRequest) {
 
 // PUT - Update user profile in Railway
 export async function PUT(request: NextRequest) {
+  console.log('🚀🚀🚀 PUT /api/user/profile CALLED - This should appear in server console!')
+  console.log('🚀 DEBUG: PUT /api/user/profile called!')
   try {
     const { userId, ...updateData } = await request.json()
+    console.log('🚀 DEBUG: Request data received:', { userId, updateData })
 
     if (!userId) {
+      console.log('🚀 DEBUG: No userId provided, returning error')
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
+    console.log('🚀 DEBUG: UserId validation passed, continuing...')
 
     console.log('🔄 API: Updating profile for user:', userId)
     console.log('📊 API: Update data received:', updateData)
@@ -176,9 +189,11 @@ export async function PUT(request: NextRequest) {
       console.log('✅ SELECT query executed successfully')
       
       if (existingRes.rows.length === 0) {
+        console.log('🚀 DEBUG: User not found in work status table, returning error')
         console.log('❌ API: User not found for update:', userId)
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
+      console.log('🚀 DEBUG: User found in work status table, continuing...')
 
       const existing = existingRes.rows[0]
       console.log('📊 Existing user data:', existing)
@@ -276,11 +291,15 @@ export async function PUT(request: NextRequest) {
     
     const result = await pool.query(updateSql, params)
     console.log('✅ UPDATE query executed successfully')
+    console.log('🚀🚀🚀 UPDATE RESULT - Rows affected:', result.rowCount)
+    console.log('🚀🚀🚀 UPDATE RESULT - Updated user:', result.rows[0])
 
     if (result.rows.length === 0) {
+      console.log('🚀 DEBUG: User not found in main users table, returning error')
       console.log('❌ API: User not found for update:', userId)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+    console.log('🚀 DEBUG: User found in main users table, continuing...')
 
     const updatedUser = result.rows[0]
     console.log('✅ API: User profile updated:', {
@@ -288,6 +307,7 @@ export async function PUT(request: NextRequest) {
       full_name: updatedUser.full_name,
       avatar_url: updatedUser.avatar_url
     })
+    console.log('🚀🚀🚀 DATABASE UPDATE COMPLETED - About to start position sync!')
 
     // Sync position changes to user_work_status table
     if (updateData.position !== undefined) {
@@ -322,41 +342,7 @@ export async function PUT(request: NextRequest) {
         console.log('❌ Full error details:', error)
       }
     }
-
-
-    // Also update Supabase auth user metadata so future syncs won't revert names
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if (supabaseUrl && serviceKey) {
-        const supabaseAdmin = createClient(supabaseUrl, serviceKey)
-        const adminRes = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            first_name: firstName,
-            last_name: lastName,
-            full_name: fullName,
-            location,
-            phone,
-            position,
-            location_place_id: locationPlaceId,
-            location_lat: locationLat,
-            location_lng: locationLng,
-            location_city: locationCity,
-            location_province: locationProvince,
-            location_country: locationCountry
-          }
-        })
-        if (adminRes.error) {
-          console.log('⚠️ Supabase admin metadata update failed:', adminRes.error.message)
-        } else {
-          console.log('✅ Supabase metadata updated for user:', userId)
-        }
-      } else {
-        console.log('⚠️ Skipping Supabase metadata update - missing env vars')
-      }
-    } catch (e) {
-      console.log('⚠️ Error updating Supabase metadata (non-fatal):', e instanceof Error ? e.message : String(e))
-    }
+    console.log('🚀🚀🚀 POSITION SYNC COMPLETED - About to start resume slug update!')
 
     // Ensure saved resume slug reflects the updated first/last name
     let resumeSlugUpdated = false
@@ -441,7 +427,44 @@ export async function PUT(request: NextRequest) {
       console.log('⚠️ Skipping resume slug update:', e instanceof Error ? e.message : String(e))
     }
 
-      return NextResponse.json({ user: updatedUser, resumeSlugUpdated, newResumeSlug })
+    console.log('🚀🚀🚀 BEFORE SUPABASE UPDATE - Code reached this point!')
+    // Update Supabase display name to match database
+    console.log('🚀🚀🚀 SUPABASE UPDATE STARTING - This should appear in console!')
+    console.log('🔄 Updating Supabase display name to match database...')
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (supabaseUrl && serviceKey) {
+        console.log('✅ Updating Supabase display name to:', fullName)
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey)
+        
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            full_name: fullName,
+            location,
+            phone,
+            position,
+            bio,
+            company
+          }
+        })
+        
+        if (error) {
+          console.error('❌ Supabase update failed:', error.message)
+        } else {
+          console.log('✅ Supabase display name updated to:', data.user?.user_metadata?.full_name)
+        }
+      } else {
+        console.log('⚠️ Missing Supabase environment variables')
+      }
+    } catch (error) {
+      console.error('❌ Supabase update error:', error instanceof Error ? error.message : String(error))
+    }
+
+    return NextResponse.json({ user: updatedUser, resumeSlugUpdated, newResumeSlug })
       
     } catch (dbError) {
       console.error('❌ Database error during profile update:', dbError)

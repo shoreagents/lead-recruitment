@@ -280,12 +280,8 @@ export default function SignUpForm({ open, onOpenChange, onSwitchToLogin }: Sign
         
         // Sign out the user so they need to sign in manually
         try {
-          const signOutResult = await signOut()
-          if (signOutResult?.error) {
-            console.error('Error signing out after registration:', signOutResult.error)
-          } else {
-            console.log('✅ User signed out after registration, must sign in manually')
-          }
+          await signOut()
+          console.log('✅ User signed out after registration, must sign in manually')
         } catch (signOutError) {
           console.error('Error during sign out after registration:', signOutError)
         }
